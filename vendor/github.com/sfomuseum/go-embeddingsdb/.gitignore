@@ -1,0 +1,8 @@
+*~
+bin
+*.a
+build.sh
+dist
+work
+.build
+*.db

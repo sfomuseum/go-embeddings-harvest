@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package org_sfomuseum_embeddingsdb_service;
+option go_package = "github.com/sfomuseum/go-embeddingsdb/grpc";
+
+service EmbeddingsDBService {
+    rpc AddRecord(AddRecordRequest) returns (AddRecordResponse) {}
+    rpc GetRecord(GetRecordRequest) returns (GetRecordResponse) {}
+    rpc SimilarRecords(SimilarRecordsRequest) returns (SimilarRecordsResponse) {}
+    rpc SimilarRecordsById(SimilarRecordsByIdRequest) returns (SimilarRecordsResponse) {}
+    rpc GetModels(GetModelsRequest) returns (GetModelsResponse) {}
+    rpc GetProviders(GetProvidersRequest) returns (GetProvidersResponse) {}    
+}
+
+message EmbeddingsDBRecord {
+    string provider = 1;
+    string depiction_id = 2;
+    string subject_id = 3;
+    string model = 4;
+    repeated float embeddings = 5;
+    map<string, string> attributes = 6;
+    int64 created = 7;
+}
+
+message AddRecordRequest {
+    EmbeddingsDBRecord record = 1;
+}
+
+message AddRecordResponse {}
+
+message GetRecordRequest {
+    string provider = 1;
+    string depiction_id = 2;
+    string model = 3;
+}
+
+message GetRecordResponse {
+    EmbeddingsDBRecord record = 1;
+}
+
+message SimilarRecordsRequest {
+    string model = 1;
+    repeated float embeddings = 2;
+    repeated string exclude = 3;
+    optional string similar_provider = 4;    
+    optional float max_distance = 5;
+    optional int32 max_results = 6;
+}
+
+message SimilarRecordsByIdRequest {
+    string provider = 1;
+    string depiction_id = 2;
+    string model = 3;
+    optional string similar_provider = 4;
+    optional float max_distance = 5;
+    optional int32 max_results = 6;    
+}
+
+message SimilarRecordsResponse {
+    repeated SimilarRecord records = 1;
+}
+
+message SimilarRecord {
+    string provider = 1;
+    string depiction_id = 2;
+    string subject_id = 3;
+    float distance = 4;
+    map<string, string> attributes = 5;
+}
+
+message GetModelsRequest {
+    repeated string provider = 1;
+}
+
+message GetModelsResponse {
+    repeated string model = 1;
+}
+
+message GetProvidersRequest {
+}
+
+message GetProvidersResponse {
+    repeated string provider = 1;
+}
