@@ -124,6 +124,7 @@ func main() {
 		depiction_id := strconv.FormatInt(id, 10)
 		subject_id := media_id
 
+		// Update to use https://github.com/sfomuseum/go-sfomuseum-instagram-publish/blob/main/secret/secret.go
 		ig_secret := instagramSecret(media_id)
 
 		im_url := fmt.Sprintf("https://static.sfomuseum.org/media/instagram/%s/%s_%s_n.jpg", media_id, media_id, ig_secret)
