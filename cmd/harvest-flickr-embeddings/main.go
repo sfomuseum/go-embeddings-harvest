@@ -65,6 +65,10 @@ func main() {
 	logger := slog.Default()
 	ctx := context.Background()
 
+	if len(models) == 0 {
+		log.Fatal("No models defined")
+	}
+
 	client_uri, err := runtimevar.StringVar(ctx, flickr_client_uri)
 
 	if err != nil {

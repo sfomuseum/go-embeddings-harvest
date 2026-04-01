@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 
 	parquet_go "github.com/parquet-go/parquet-go"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
+	"github.com/sfomuseum/go-embeddings-harvest"	
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
@@ -54,6 +54,10 @@ func main() {
 	logger = logger.With("output", output)
 
 	ctx := context.Background()
+
+	if len(models) == 0 {
+		log.Fatal("No models defined")
+	}
 
 	emb_cl, err := sfom_embeddings.NewEmbedder32(ctx, embeddings_client_uri)
 
@@ -149,52 +153,26 @@ func main() {
 			continue
 		}
 
-		// START OF make me common code
-
-		records := make([]*embeddingsdb.Record, 0)
-
-		wg := new(sync.WaitGroup)
-		mu := new(sync.RWMutex)
-
-		for _, m := range models {
-
-			wg.Go(func() {
-
-				emb_req := &sfom_embeddings.EmbeddingsRequest{
-					Model: m,
-					Body:  im_body,
-				}
-
-				emb_rsp, err := emb_cl.ImageEmbeddings(ctx, emb_req)
-
-				if err != nil {
-					logger.Error("Failed to derive ebeddings", "image", im_url, "model", m, "error", err)
-					return
-				}
-
-				db_rec := &embeddingsdb.Record{
-					Provider:    provider,
-					DepictionId: depiction_id,
-					SubjectId:   subject_id,
-					Model:       emb_rsp.Model(),
-					Embeddings:  emb_rsp.Embeddings(),
-					Attributes: map[string]string{
-						"uri": im_url,
-						// "title": title,
-					},
-					Created: emb_rsp.Created(),
-				}
-
-				logger.Debug("Add record", "key", db_rec.Key())
-
-				mu.Lock()
-				records = append(records, db_rec)
-				mu.Unlock()
-			})
+		attrs := map[string]string {
+			"uri": im_url,			
+		}
+		
+		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
+			Provider: provider,
+			DepictionId: depiction_id,
+			SubjectId: subject_id,
+			Attributes: attrs,
+			Models: models,
+			Body: im_body,
 		}
 
-		wg.Wait()
+		records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
 
+		if err != nil {
+			logger.Error("Failed to derive embeddings records", "error", err)
+			continue
+		}
+		
 		if len(records) > 0 {
 
 			_, err = p_wr.Write(records)

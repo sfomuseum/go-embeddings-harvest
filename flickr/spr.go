@@ -11,6 +11,7 @@ import (
 	parquet_go "github.com/parquet-go/parquet-go"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddings-harvest"	
 	"github.com/tidwall/gjson"
 )
 
@@ -130,43 +131,34 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 		return fmt.Errorf("Failed to read photo %s, %w", ph_url)
 	}
 
-	records := make([]*embeddingsdb.Record, len(opts.Models))
-
-	for idx, model := range opts.Models {
-
-		emb_req := &sfom_embeddings.EmbeddingsRequest{
-			Model: model,
-			Body:  im_body,
-		}
-
-		emb_rsp, err := opts.EmbeddingsClient.ImageEmbeddings(ctx, emb_req)
-
-		if err != nil {
-			return fmt.Errorf("Failed to derive image embeddings for %s (%s), %w", ph_url, model, err)
-		}
-
-		db_rec := &embeddingsdb.Record{
-			Provider:    opts.Provider,
-			DepictionId: id,
-			SubjectId:   id,
-			Model:       emb_rsp.Model(),
-			Embeddings:  emb_rsp.Embeddings(),
-			Attributes: map[string]string{
-				"uri":   ph_url,
-				"title": title,
-			},
-			Created: emb_rsp.Created(),
-		}
-
-		logger.Debug("Add record", "key", db_rec.Key())
-		records[idx] = db_rec
+	attrs := map[string]string{
+		"uri":   ph_url,
+		"title": title,
 	}
 
-	_, err = opts.ParquetWriter.Write(records)
+	derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
+		Provider: opts.Provider,
+		DepictionId: id,
+		SubjectId: id,
+		Attributes: attrs,
+		Models: opts.Models,
+		Body: im_body,
+	}
 
+	records, err := harvest.DeriveEmbeddingsRecords(ctx, opts.EmbeddingsClient, derive_opts)
+	
 	if err != nil {
-		return fmt.Errorf("Failed to append records to parquet writer for %s, %w", ph_url, err)
+		return err
 	}
-
+	
+	if len(records) > 0 {
+		
+		_, err = opts.ParquetWriter.Write(records)
+		
+		if err != nil {
+			return fmt.Errorf("Failed to append records to parquet writer for %s, %w", ph_url, err)
+		}
+	}
+	
 	return nil
 }

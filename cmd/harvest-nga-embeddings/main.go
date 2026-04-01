@@ -2,42 +2,34 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
-	"strconv"
-
+	"time"
+	
 	parquet_go "github.com/parquet-go/parquet-go"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"	
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-csvdict/v2"	
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
-	"github.com/tidwall/gjson"
-	"github.com/whosonfirst/go-whosonfirst-feature/properties"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
-	"github.com/whosonfirst/go-whosonfirst-uri"
 )
 
 func main() {
 
 	var embeddings_client_uri string
-	var iterator_uri string
-	var iterator_source string
-	var provider string
+	var published_images string
 
 	var output string
 	var verbose bool
 	var models multi.MultiCSVString
 
-	fs := flagset.NewFlagSet("flickr")
+	fs := flagset.NewFlagSet("nga")
 
-	fs.StringVar(&iterator_uri, "iterator-uri", "repo://?exclude=properties.edtf:deprecated=.*", "...")
-	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-media-collection", "...")
-	fs.StringVar(&provider, "provider", "sfomuseum-data-media-collection", "...")
+	fs.StringVar(&published_images, "published-images", "", "The path to the 'published_images.csv' file contained in the NationalGalleryOfArt/opendata GitHub repository.")
 
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
@@ -84,69 +76,44 @@ func main() {
 
 	//
 
-	iter, err := iterate.NewIterator(ctx, iterator_uri)
+	csv_r, err := csvdict.NewReaderFromPath(published_images)
 
 	if err != nil {
-		log.Fatalf("Failed to create iterator, %v", err)
+		log.Fatalf("Failed to create CSV reader, %v", err)
 	}
 
-	for rec, err := range iter.Iterate(ctx, iterator_source) {
+	count := int64(0)
+	done_ch := make(chan bool)
+
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	go func() {
+		for {
+			select {
+			case <-done_ch:
+				return
+			case <-ticker.C:
+				slog.Info("Processed rows", "count", count)
+			}
+		}
+	}()
+	
+	for row, err := range csv_r.Iterate() {
 
 		if err != nil {
 			log.Fatalf("Iterator yielded an error, %v", err)
 		}
 
+		count += 1
+		
 		logger := slog.Default()
-		logger = logger.With("path", rec.Path)
+		logger = logger.With("path", row["uuid"])
 
-		id, uri_args, err := uri.ParseURI(rec.Path)
 
-		if err != nil {
-			logger.Error("Failed to parse path", "error", err)
-			continue
-		}
-
-		if uri_args.IsAlternate {
-			continue
-		}
-
-		body, err := io.ReadAll(rec.Body)
-		rec.Body.Close()
-
-		if err != nil {
-			logger.Error("Failed to read record body", "error", err)
-			continue
-		}
-
-		parent_id, err := properties.ParentId(body)
-
-		if err != nil {
-			logger.Error("Failed to derive parent ID", "error", err)
-			continue
-		}
-
-		logger = logger.With("id", id)
-
-		depiction_id := strconv.FormatInt(id, 10)
-		subject_id := strconv.FormatInt(parent_id, 10)
-
-		secret_rsp := gjson.GetBytes(body, "properties.media:properties.sizes.n.secret")
-
-		if !secret_rsp.Exists() {
-			logger.Error("Failed to derive image secret")
-			continue
-		}
-
-		secret := secret_rsp.String()
-
-		tree, err := uri.Id2Path(id)
-
-		if err != nil {
-			logger.Error("Failed to derive image tree", "error", err)
-			continue
-		}
-
-		im_url := fmt.Sprintf("https://static.sfomuseum.org/media/%s/%d_%s_n.jpg", tree, id, secret)
+		depiction_id := row["uuid"]
+		subject_id := row["depictstmsobjectid"]
+		im_url := row["iiifthumburl"]
 
 		logger.Debug("Fetch image", "url", im_url)
 
@@ -170,7 +137,7 @@ func main() {
 		}
 		
 		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-			Provider: provider,
+			Provider: "nga",
 			DepictionId: depiction_id,
 			SubjectId: subject_id,
 			Attributes: attrs,
@@ -185,20 +152,24 @@ func main() {
 			continue
 		}
 
-		if len(records) > 0 {
-
-			_, err = p_wr.Write(records)
-
-			if err != nil {
-				logger.Error("Failed to write records", "url", im_url, "error", err)
-			}
-
-			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+		if len(records) == 0 {
+			logger.Warn("Failed to derive embeddings")
+			continue
 		}
+		
+		_, err = p_wr.Write(records)
+		
+		if err != nil {
+			logger.Error("Failed to write records", "url", im_url, "error", err)
+		}
+		
+		logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 	}
 
 	//
 
+	done_ch <- true
+	
 	p_wr.Flush()
 
 	err = p_wr.Close()

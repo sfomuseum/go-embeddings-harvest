@@ -6,12 +6,14 @@ require (
 	github.com/aaronland/go-flickr-api v1.1.8
 	github.com/aaronland/gocloud v1.0.4
 	github.com/parquet-go/parquet-go v0.29.0
+	github.com/sfomuseum/go-csvdict/v2 v2.0.1
 	github.com/sfomuseum/go-embeddings v0.1.3
 	github.com/sfomuseum/go-embeddingsdb v0.6.0
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.18.0
 	github.com/whosonfirst/go-whosonfirst-feature v0.0.28
 	github.com/whosonfirst/go-whosonfirst-iterate/v3 v3.2.0
+	github.com/whosonfirst/go-whosonfirst-uri v1.3.0
 )
 
 require (
@@ -64,7 +66,6 @@ require (
 	github.com/whosonfirst/go-ioutil v1.0.2 // indirect
 	github.com/whosonfirst/go-whosonfirst-flags v0.5.1 // indirect
 	github.com/whosonfirst/go-whosonfirst-sources v0.1.0 // indirect
-	github.com/whosonfirst/go-whosonfirst-uri v1.3.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.40.0 // indirect
 	go.opentelemetry.io/otel/metric v1.40.0 // indirect

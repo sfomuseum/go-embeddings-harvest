@@ -40,7 +40,7 @@ func DeriveEmbeddingsRecords(ctx context.Context, cl embeddings.Embedder[float32
 			emb_rsp, err := cl.ImageEmbeddings(ctx, emb_req)
 
 			if err != nil {
-				logger.Error("Failed to derive ebeddings", "model", m, "error", err)
+				logger.Error("Failed to derive embeddings", "model", m, "error", err)
 				return
 			}
 
