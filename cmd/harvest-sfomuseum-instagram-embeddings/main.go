@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	parquet_go "github.com/parquet-go/parquet-go"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
@@ -51,7 +52,7 @@ func main() {
 
 	logger := slog.Default()
 	logger = logger.With("output", output)
-	
+
 	ctx := context.Background()
 
 	emb_cl, err := sfom_embeddings.NewEmbedder32(ctx, embeddings_client_uri)
@@ -148,38 +149,51 @@ func main() {
 			continue
 		}
 
+		// START OF make me common code
+
 		records := make([]*embeddingsdb.Record, 0)
+
+		wg := new(sync.WaitGroup)
+		mu := new(sync.RWMutex)
 
 		for _, m := range models {
 
-			emb_req := &sfom_embeddings.EmbeddingsRequest{
-				Model: m,
-				Body:  im_body,
-			}
+			wg.Go(func() {
 
-			emb_rsp, err := emb_cl.ImageEmbeddings(ctx, emb_req)
+				emb_req := &sfom_embeddings.EmbeddingsRequest{
+					Model: m,
+					Body:  im_body,
+				}
 
-			if err != nil {
-				logger.Error("Failed to derive ebeddings", "image", im_url, "model", m, "error", err)
-				continue
-			}
+				emb_rsp, err := emb_cl.ImageEmbeddings(ctx, emb_req)
 
-			db_rec := &embeddingsdb.Record{
-				Provider:    provider,
-				DepictionId: depiction_id,
-				SubjectId:   subject_id,
-				Model:       emb_rsp.Model(),
-				Embeddings:  emb_rsp.Embeddings(),
-				Attributes: map[string]string{
-					"uri": im_url,
-					// "title": title,
-				},
-				Created: emb_rsp.Created(),
-			}
+				if err != nil {
+					logger.Error("Failed to derive ebeddings", "image", im_url, "model", m, "error", err)
+					return
+				}
 
-			logger.Debug("Add record", "key", db_rec.Key())
-			records = append(records, db_rec)
+				db_rec := &embeddingsdb.Record{
+					Provider:    provider,
+					DepictionId: depiction_id,
+					SubjectId:   subject_id,
+					Model:       emb_rsp.Model(),
+					Embeddings:  emb_rsp.Embeddings(),
+					Attributes: map[string]string{
+						"uri": im_url,
+						// "title": title,
+					},
+					Created: emb_rsp.Created(),
+				}
+
+				logger.Debug("Add record", "key", db_rec.Key())
+
+				mu.Lock()
+				records = append(records, db_rec)
+				mu.Unlock()
+			})
 		}
+
+		wg.Wait()
 
 		if len(records) > 0 {
 
@@ -191,6 +205,8 @@ func main() {
 
 			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 		}
+
+		// END OF make me common code
 	}
 
 	//
