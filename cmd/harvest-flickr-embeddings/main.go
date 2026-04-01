@@ -82,7 +82,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create embeddings client, %v", err)
 	}
-	
+
 	var wr io.WriteCloser
 
 	switch output {

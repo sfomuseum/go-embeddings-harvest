@@ -13,6 +13,15 @@ type GetRecordResponse struct {
 	Record *Record `json:"record"`
 }
 
+type RemoveRecordRequest struct {
+	// Provider is the name (or context) of the provider responsible for DepictionId.
+	Provider string `json:"provider"`
+	// Model is the name of the model to specify when querying for similar embeddings.
+	Model string `json:"model"`
+	// DepictionId is the unique identifier for the depiction for which embeddings have been generated.
+	DepictionId string `json:"depiction_id"`
+}
+
 type SimilarRecordsByIdRequest struct {
 	// Provider is the name (or context) of the provider responsible for DepictionId.
 	Provider string `json:"provider"`

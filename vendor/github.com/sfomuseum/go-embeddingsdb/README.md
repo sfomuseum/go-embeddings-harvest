@@ -51,6 +51,12 @@ type Database interface {
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	// Remove a record from an EmbeddingsDB instance.
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
+	// ListRecords returns a pagination list of records stored in the database.
+	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
+	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
+	IterateRecords(context.Context) iter.Seq2[*embeddingsdb.Record, error]
 	// Find similar records for a given model and record instance.
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
@@ -62,7 +68,7 @@ type Database interface {
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...string) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)	
+	Providers(context.Context) ([]string, error)
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error
 }
@@ -91,6 +97,10 @@ type Client interface {
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Retrieve a specific record from an embeddings database.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	// Remove a record from an EmbeddingsDB instance.
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
+	// ListRecords returns a pagination list of records stored in the database.
+	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
 	// Retrieve records with similar embeddings from an embeddings database.
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
@@ -98,7 +108,7 @@ type Client interface {
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...string) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)	
+	Providers(context.Context) ([]string, error)
 }
 ```
 
@@ -230,6 +240,9 @@ The easiest way to build the included tools is to run the handy `cli` Makefile t
 $> make cli
 go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
 go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
+go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-inspector cmd/inspector/main.go
+go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
+go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
 ```
 
 ### Build tags
@@ -301,7 +314,9 @@ Usage:
 
 Valid commands are:
 * record [options]
+* remove [options]
 * similar-by-id [options]
+* list [options]
 * models [options]
 * providers [options]
 ```
@@ -344,6 +359,35 @@ $> ./bin/embeddingsdb-client record -provider sfomuseum-data-media-collection -d
     -0.017242432,
     -0.021408081,
     ... and so on
+```
+
+#### embeddingsdb-client remove
+
+Command-line tool for removing a record from a gRPC EmbeddingsDB "service".
+
+```
+$> ./bin/embeddingsdb-client remove -h
+Command-line tool for removing a record from a gRPC EmbeddingsDB "service".
+Usage:
+	record [options]
+
+Valid options are:
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -depiction-id string
+    	The unique depiction ID associated with the record to retrieve.
+  -model string
+    	The name of the model associated with the record to retrieve. (default "apple/mobileclip_s0")
+  -provider string
+    	The name of the provider associated with the record to retrieve.
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/embeddingsdb-client remove -client-uri grpc://localhost:8081 -depiction-id 08_michael_ross_sfom.jpg -provider sfomuseum-dotorg-exhibition -model apple/mobileclip_s2
 ```
 
 #### embeddingsdb-client similar-by-id
@@ -391,6 +435,49 @@ $> ./bin/embeddingsdb-client similar-by-id -provider sfomuseum-data-media-collec
 1880273579
 1880319239
 1964039457
+```
+
+#### embeddingsdb-client list
+
+Paginated list of all the records in an embeddingsdb database emitted to STDOUT as line-separated JSON.Usage:
+
+```
+$> ./bin/embeddingsdb-client list -h
+Paginated list of all the records in an embeddingsdb database emitted to STDOUT as line-separated JSON.Usage:
+	list [options]
+
+Valid options are:
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -end-page int
+    	The maximum page number of results to emit. If -1 then this flag will be ignored and all the results (remaining after -start-page * -per-page) will be returned. (default -1)
+  -per-page int
+    	The number of records to include in each paginated result set. (default 10)
+  -start-page int
+    	The initial page of results to emit. (default 1)
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+> ./bin/embeddingsdb-client list -verbose -per-page 1000 > test.jsonl
+2026/03/30 12:04:30 DEBUG Verbose logging enabled
+2026/03/30 12:04:30 DEBUG Allow insecure connections
+2026/03/30 12:04:30 DEBUG Start pagination "start page"=1 "end page"=-1 "per page"=1000
+2026/03/30 12:04:30 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=1 "total page count"=0
+2026/03/30 12:04:33 DEBUG Assign total pages "start page"=1 "end page"=-1 "per page"=1000 pages=0
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=2 "total page count"=236
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=3 "total page count"=236
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=4 "total page count"=236
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=5 "total page count"=236
+... time passes, pagination happens
+2026/03/30 12:05:20 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=235 "total page count"=236
+2026/03/30 12:05:21 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=236 "total page count"=236
+
+$> wc -l test.jsonl
+  235200 test.jsonl
 ```
 
 #### embeddingsdb-client models
@@ -447,6 +534,173 @@ $> ./bin/embeddingsdb-client providers -client-uri 'grpc://localhost:8081' | jq
 [
   "sfomuseum-data-media-collection"
 ]
+```
+
+### embeddingsdb-inspector
+
+A minimalist web-interface for inspecting documents stored in a `embeddingsdb-server` instance.
+
+```
+$> ./bin/embeddingsdb-inspector -h
+A minimalist web-interface for inspecting documents stored in a `embeddingsdb-server` instance.
+Usage:
+	./bin/embeddingsdb-inspector [options]
+Valid options are:
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -embeddings-client-uri string
+    	A registered go-embeddings.Client URI. This is required if the -enable-uploads flag is true.
+  -enable-uploads
+    	Enable search by upload functionality.
+  -max-results int
+    	The maximum number of similar results to return. (default 20)
+  -max-upload-size int
+    	The maximum size (in bytes) for uploads. (default 10485760)
+  -server-uri string
+    	A registered aaronland/go-http/v4/server.Server URI. (default "http://localhost:8080")
+  -uri-prefix string
+    	An optional prefix (location) to serve the application from.
+  -verbose
+    	Enable verbose (debug) logging.
+```
+
+For example:
+
+```
+$> make inspector
+go run -tags=duckdb,sqlite -mod vendor \
+		cmd/inspector/main.go \
+		-verbose \
+		-client-uri 'grpc://localhost:8081' \
+		-enable-uploads \
+		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
+		-server-uri http://localhost:8082
+2026/03/30 12:42:01 DEBUG Verbose logging enabled
+2026/03/30 12:42:01 DEBUG Allow insecure connections
+2026/03/30 12:42:01 INFO Listen for requests address=http://localhost:8082
+```
+
+Opening your web browser to `http://localhost:8082` you would see something like this (depending on the records you've indexed in the `embeddingsdb` databae):
+
+![](docs/images/embeddingsdb-list.png)
+
+You can filter the list view by model and by provider (the source of embeddings). Individual record pages look like this:
+
+![](docs/images/embeddingsdb-record.png)
+
+By default record pages will show similar records for a single model across all providers. Both of these facets may be updated.
+
+If enabled (with the `-enable-upload` flag) there is also an endpoint where you can upload an image of your choosing, generate embeddings on the fly for that image and then use those data to search for similar images in the `embeddingsdb` database. For example:
+
+![](docs/images/embeddingsdb-search.png)
+
+#### Note and caveats
+
+##### embeddingsdb-inspector is a client
+
+Conceptually, the `embeddingsdb-inspector` is a _client_ (as described above) of an `embeddingsdb` database instance. That means one of two things:
+
+1. You will need to have an `embeddingsdb` server instance running somewhere which will broker communications with the underlying database; for example the `grpc://localhost:8081` URI above.
+2. You will need to specify a `database://` client URI appropriate to your setup; for example, to interact directly with a local DuckDB database your client URI would be something like `database://?database-uri=duckdb:///usr/local/data/embeddings`.
+
+##### search by upload
+
+In order for the "search by upload" functionality to work you will need to instantiate an instance of the [sfomuseum/go-embeddings](https://github.com/sfomuseum/go-embeddings) `Client` interface. The `go-embeddingsdb` package only supports storing, indexing and querying vector embeddings. It does handle _creating_ them. This is handled by the `go-embeddings` package which supports [a number of different implementations](https://github.com/sfomuseum/go-embeddings?tab=readme-ov-file#implementations) for generating vector embeddings.
+
+##### importing records
+
+The `embeddingsdb-inspector` does not handle _importing_ records in to an `embeddingsdb` database. This is handled by separate processes like the `parquet-import` tool described below.
+
+### parquet-import
+
+Import parquet-encoded embeddingsdb records from one or more files and add them to an embeddingsdb instance.
+
+```
+$> ./bin/parquet-import -h
+Import parquet-encoded embeddingsdb records from one or more files and add them to an embeddingsdb instance.
+Usage:
+	./bin/parquet-import [options] parquet_file(N) parquet_file(N)
+Valid options are:
+  -client-uri string
+    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/parquet-import -client-uri grpc://localhost:8081 -verbose ./test.parquet 
+2026/03/24 11:10:11 DEBUG Verbose logging enabled
+2026/03/24 11:10:11 DEBUG Allow insecure connections
+2026/03/24 11:11:11 DEBUG Records imported count=9958
+...and so on
+```
+
+And then:
+
+```
+$> duckdb
+DuckDB v1.4.2 (Andium) 68d7555f68
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+D SELECT COUNT(depiction_id) FROM read_parquet('test.parquet');
+┌─────────────────────┐
+│ count(depiction_id) │
+│        int64        │
+├─────────────────────┤
+│       216774        │
+└─────────────────────┘
+```
+
+### parquet-export
+
+Export embeddingsdb records as Parquet-encoded data.
+
+```
+$> ./bin/parquet-export -h
+Export embeddingsdb records as Parquet-encoded data.
+Usage:
+	./bin/parquet-export [options]Valid options are:
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -output string
+    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/parquet-export -output export.parquet -verbose
+2026/03/30 12:15:31 DEBUG Verbose logging enabled
+2026/03/30 12:15:31 DEBUG Allow insecure connections
+2026/03/30 12:15:31 DEBUG Start pagination "start page"=1 "end page"=-1 "per page"=1000
+2026/03/30 12:15:31 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=1 "total page count"=0
+2026/03/30 12:15:34 DEBUG Assign total pages "start page"=1 "end page"=-1 "per page"=1000 pages=0
+2026/03/30 12:15:34 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=2 "total page count"=236
+2026/03/30 12:15:34 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=3 "total page count"=236
+2026/03/30 12:15:34 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=4 "total page count"=236
+...time passes
+```
+
+And then:
+
+```
+$> duckdb
+DuckDB v1.4.2 (Andium) 68d7555f68
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+D SELECT COUNT(depiction_id) FROM read_parquet('export.parquet');
+┌─────────────────────┐
+│ count(depiction_id) │
+│        int64        │
+├─────────────────────┤
+│       235200        │
+└─────────────────────┘
 ```
 
 ## DuckDB

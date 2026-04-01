@@ -14,6 +14,18 @@ fix:
 cli:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-inspector cmd/inspector/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
+
+inspector:
+	go run -tags=$(TAGS) -mod $(GOMOD) \
+		cmd/inspector/main.go \
+		-verbose \
+		-client-uri 'grpc://localhost:8081' \
+		-enable-uploads \
+		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
+		-server-uri http://localhost:8082
 
 server-bundle:
 	CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" go build -tags=duckdb,duckdb_use_static_lib -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go

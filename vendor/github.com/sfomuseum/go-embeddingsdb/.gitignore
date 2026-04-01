@@ -6,3 +6,4 @@ dist
 work
 .build
 *.db
+*.parquet
