@@ -49,6 +49,9 @@ func main() {
 		slog.Debug("Verbose logging enabled")
 	}
 
+	logger := slog.Default()
+	logger = logger.With("output", output)
+	
 	ctx := context.Background()
 
 	emb_cl, err := sfom_embeddings.NewEmbedder32(ctx, embeddings_client_uri)
@@ -194,6 +197,7 @@ func main() {
 
 	p_wr.Flush()
 
+	logger.Info("Close parquet writer")
 	err = p_wr.Close()
 
 	if err != nil {
