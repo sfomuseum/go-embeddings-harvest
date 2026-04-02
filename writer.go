@@ -20,8 +20,8 @@ func NopWriteCloser(w io.Writer) io.WriteCloser {
 }
 
 type HarvestWriter struct {
-	wr            io.WriteCloser
-	ParquetWriter *parquet_go.GenericWriter[*embeddingsdb.Record]
+	writer         io.WriteCloser
+	parquet_writer *parquet_go.GenericWriter[*embeddingsdb.Record]
 }
 
 func NewWriter(output string) (*HarvestWriter, error) {
@@ -45,24 +45,28 @@ func NewWriter(output string) (*HarvestWriter, error) {
 	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
 
 	h_wr := &HarvestWriter{
-		wr:            wr,
-		ParquetWriter: p_wr,
+		writer:         wr,
+		parquet_writer: p_wr,
 	}
 
 	return h_wr, nil
 }
 
+func (h *HarvestWriter) Write(rows []*embeddingsdb.Record) (int, error) {
+	return h.parquet_writer.Write(rows)
+}
+
 func (h *HarvestWriter) Close() error {
 
-	h.ParquetWriter.Flush()
+	h.parquet_writer.Flush()
 
-	err := h.ParquetWriter.Close()
+	err := h.parquet_writer.Close()
 
 	if err != nil {
 		return fmt.Errorf("Failed to close Parquet writer, %w", err)
 	}
 
-	err = h.wr.Close()
+	err = h.writer.Close()
 
 	if err != nil {
 		return fmt.Errorf("Failed to close writer, %w", err)

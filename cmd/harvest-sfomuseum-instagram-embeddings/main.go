@@ -8,13 +8,10 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 	"strconv"
 
-	parquet_go "github.com/parquet-go/parquet-go"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
-	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 	"github.com/tidwall/gjson"
@@ -65,25 +62,11 @@ func main() {
 		log.Fatalf("Failed to create embeddings client, %v", err)
 	}
 
-	var wr io.WriteCloser
+	wr, err := harvest.NewWriter(output)
 
-	switch output {
-	case "-":
-		wr = os.Stdout
-	default:
-
-		w, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0644)
-
-		if err != nil {
-			log.Fatalf("Failed to open %s for writing, %v", output, err)
-		}
-
-		wr = w
+	if err != nil {
+		log.Fatalf("Failed to create new writer, %v", err)
 	}
-
-	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
-
-	//
 
 	iter, err := iterate.NewIterator(ctx, iterator_uri)
 
@@ -178,7 +161,7 @@ func main() {
 			continue
 		}
 
-		_, err = p_wr.Write(records)
+		_, err = wr.Write(records)
 
 		if err != nil {
 			logger.Error("Failed to write records", "url", im_url, "error", err)
@@ -189,24 +172,10 @@ func main() {
 
 	//
 
-	p_wr.Flush()
-
-	logger.Info("Close parquet writer")
-	err = p_wr.Close()
+	err = wr.Close()
 
 	if err != nil {
-		log.Fatalf("Failed to close Parquet writer, %v", err)
-	}
-
-	switch output {
-	case "-":
-		// pass
-	default:
-		err = wr.Close()
-
-		if err != nil {
-			log.Fatalf("Failed to close %s after writing, %v", output, err)
-		}
+		log.Fatalf("Failed to close after writing, %v", err)
 	}
 
 }

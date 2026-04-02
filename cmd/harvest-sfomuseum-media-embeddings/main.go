@@ -175,7 +175,7 @@ func main() {
 			continue
 		}
 
-		_, err = wr.ParquetWriter.Write(records)
+		_, err = wr.Write(records)
 
 		if err != nil {
 			logger.Error("Failed to write records", "url", im_url, "error", err)
