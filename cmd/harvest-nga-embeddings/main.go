@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"io"
+	"fmt"
+	"os"
 	"log"
 	"log/slog"
 	"net/http"
@@ -34,6 +36,13 @@ func main() {
 	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "mobileclip://?client-uri=grpc://localhost:8080", "A registered sfomuseum/go-embeddingsdb/client.Client URI.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
 
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Generate Parquet-encoded embeddings from the National Gallery of Art (NGA) open data release.\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Valid options are:\n")
+		fs.PrintDefaults()
+	}
+	
 	flagset.Parse(fs)
 
 	if verbose {
