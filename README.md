@@ -75,7 +75,9 @@ $> ./bin/harvest-flickr-embeddings \
 	-output flickr.parquet \
 
 $> cd /usr/local/src/go-embeddingsdb
-$> ./bin/parquet-import -verbose -client-uri grpc://localhost:8081 /usr/local/src/go-embeddings-harvest/flickr.parquet
+$> ./bin/parquet-import \
+	-client-uri grpc://localhost:8081 \
+	/usr/local/src/go-embeddings-harvest/flickr.parquet
 ```
 
 ### harvest-flickr-embeddings
