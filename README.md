@@ -120,7 +120,7 @@ For example, to derive embeddings from the San Diego Air and Space Museum's [Cal
 	-verbose	
 ```
 
-### Flickr Standard Photos Response `-spr-path`
+#### Flickr Standard Photos Response (`-spr-path`)
 
 The [Standard Photos Response, APIs for a civilized age](https://code.flickr.net/2008/08/19/standard-photos-response-apis-for-civilized-age/) blog post from Flickr describes the standard photos response (SPR) this way:
 
@@ -142,7 +142,7 @@ $> ./bin/harvest-flickr-embeddings \
 	-model s0,s1,s2
 ```
 
-### Flickr API client credentials URIs `-flickr-client-uri`
+#### Flickr API client credentials URIs (`-flickr-client-uri`)
 
 Under the hood this tool uses the [aaronland/go-flickr-api](https://github.com/aaronland/go-flickr-api) package to communicate with the Flickr API. The nature of the Flickr API means that you need to provide a long credentials URI like this:
 
@@ -151,6 +151,11 @@ oauth1://?consumer_key={KEY}&consumer_secret={SECRET}&oauth_token={TOKEN}&oauth_
 ```
 
 _This_ package uses the [gocloud.dev/runtimevar](https://gocloud.dev/howto/runtimevar/) package to read those long-twisty URIs from a variety of sources. For the purposes of getting start the easiest thing is to put your `go-flickr-api` credentials URI in a local file and then refer to it as `file://path/to/file-containing-credentials`.
+
+#### See also
+
+* https://www.flickr.com/services/api/
+* github.com/aaronland/go-flickr-api
 
 ### harvest-nga-embeddings
 
@@ -182,6 +187,10 @@ $> ./bin/harvest-nga-embeddings \
 	-model s0,s1,s2
 ```
 
+#### See also
+
+* https://github.com/NationalGalleryOfArt/opendata
+
 ### harvest-sfomuseum-instagram-embeddings
 
 Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-socialmedia-instagram data repositories (aka "Instragram photos").
@@ -204,6 +213,10 @@ Usage:
   -verbose
     	Enable verbose (debug) logging.
 ```
+
+#### See also
+
+* github.com/sfomuseum-data/sfomuseum-data-socialmedia-instagram/
 
 ### harvest-sfomuseum-media-embeddings
 
@@ -229,6 +242,11 @@ Usage:
   -verbose
     	Enable verbose (debug) logging.
 ```
+
+#### See also
+
+* github.com/sfomuseum-data/sfomuseum-data-media
+* github.com/sfomuseum-data/sfomuseum-data-media-collection
 
 ## See also
 
