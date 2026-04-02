@@ -13,7 +13,7 @@ import (
 
 	parquet_go "github.com/parquet-go/parquet-go"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddings-harvest"	
+	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
@@ -34,8 +34,8 @@ func main() {
 
 	fs := flagset.NewFlagSet("flickr")
 
-	fs.StringVar(&iterator_uri, "iterator-uri", "repo://", "...")
-	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-socialmedia-instagram", "...")
+	fs.StringVar(&iterator_uri, "iterator-uri", "repo://?exclude=properties.edtf:deprecated=.*", "A registered go-whosonfirst-iterate/v3.Iterator URI.")
+	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-socialmedia-instagram", "The source for the go-whosonfirst-iterate/v3.Iterator instance to process.")
 
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
@@ -153,17 +153,17 @@ func main() {
 			continue
 		}
 
-		attrs := map[string]string {
-			"uri": im_url,			
+		attrs := map[string]string{
+			"uri": im_url,
 		}
-		
+
 		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-			Provider: provider,
+			Provider:    provider,
 			DepictionId: depiction_id,
-			SubjectId: subject_id,
-			Attributes: attrs,
-			Models: models,
-			Body: im_body,
+			SubjectId:   subject_id,
+			Attributes:  attrs,
+			Models:      models,
+			Body:        im_body,
 		}
 
 		records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
@@ -172,19 +172,19 @@ func main() {
 			logger.Error("Failed to derive embeddings records", "error", err)
 			continue
 		}
-		
-		if len(records) > 0 {
 
-			_, err = p_wr.Write(records)
-
-			if err != nil {
-				logger.Error("Failed to write records", "url", im_url, "error", err)
-			}
-
-			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+		if len(records) == 0 {
+			logger.Warn("Failed to derive any embeddings records")
+			continue
 		}
 
-		// END OF make me common code
+		_, err = p_wr.Write(records)
+
+		if err != nil {
+			logger.Error("Failed to write records", "url", im_url, "error", err)
+		}
+
+		logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 	}
 
 	//

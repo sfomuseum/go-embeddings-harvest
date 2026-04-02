@@ -10,12 +10,12 @@ import (
 )
 
 type DeriveEmbeddingsRecordsOptions struct {
-	Provider         string
-	DepictionId      string
-	SubjectId        string
-	Attributes       map[string]string
-	Models           []string
-	Body             []byte
+	Provider    string
+	DepictionId string
+	SubjectId   string
+	Attributes  map[string]string
+	Models      []string
+	Body        []byte
 }
 
 func DeriveEmbeddingsRecords(ctx context.Context, cl embeddings.Embedder[float32], opts *DeriveEmbeddingsRecordsOptions) ([]*embeddingsdb.Record, error) {

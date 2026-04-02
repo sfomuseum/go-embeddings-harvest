@@ -43,16 +43,16 @@ func main() {
 	var models multi.MultiCSVString
 
 	fs := flagset.NewFlagSet("flickr")
-	fs.StringVar(&flickr_client_uri, "flickr-client-uri", "", "...")
+	fs.StringVar(&flickr_client_uri, "flickr-client-uri", "", "A gocloud/runtimevar URI which dereferences in to a valid aaronland/go-flickr-api/client.Client URI.")
 	fs.Var(&params, "param", "Zero or more {KEY}={VALUE} parameters to query the Flickr API with.")
 
-	fs.StringVar(&provider, "provider", "flickr", "...")
-	fs.StringVar(&spr_path, "spr-path", "", "...")
+	fs.StringVar(&provider, "provider", "flickr", "The name of the provider to assign to each embeddings record.")
+	fs.StringVar(&spr_path, "spr-path", "", "The path to the list of photos in the Flickr API response. Paths should be described using tidwall/gjson \"dot\" notation.")
 
-	fs.Var(&models, "model", "...")
+	fs.Var(&models, "model", "One or more models to use to generate embeddings. This may also be a comma-separated string containing a list of models.")
 
 	fs.StringVar(&output, "output", "-", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
-	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "mobileclip://?client-uri=grpc://localhost:8080", "...")
+	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "mobileclip://?client-uri=grpc://localhost:8080", "A registered sfomuseum/go-embeddings.Client URI.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
 
 	flagset.Parse(fs)

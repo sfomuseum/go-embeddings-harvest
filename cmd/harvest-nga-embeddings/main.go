@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"os"
 	"time"
-	
+
 	parquet_go "github.com/parquet-go/parquet-go"
+	"github.com/sfomuseum/go-csvdict/v2"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddings-harvest"	
+	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-csvdict/v2"	
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 )
@@ -49,7 +49,7 @@ func main() {
 	if len(models) == 0 {
 		log.Fatal("No models defined")
 	}
-	
+
 	emb_cl, err := sfom_embeddings.NewEmbedder32(ctx, embeddings_client_uri)
 
 	if err != nil {
@@ -98,7 +98,7 @@ func main() {
 			}
 		}
 	}()
-	
+
 	for row, err := range csv_r.Iterate() {
 
 		if err != nil {
@@ -106,10 +106,9 @@ func main() {
 		}
 
 		count += 1
-		
+
 		logger := slog.Default()
 		logger = logger.With("path", row["uuid"])
-
 
 		depiction_id := row["uuid"]
 		subject_id := row["depictstmsobjectid"]
@@ -132,17 +131,17 @@ func main() {
 			continue
 		}
 
-		attrs := map[string]string {
-			"uri": im_url,			
+		attrs := map[string]string{
+			"uri": im_url,
 		}
-		
+
 		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-			Provider: "nga",
+			Provider:    "nga",
 			DepictionId: depiction_id,
-			SubjectId: subject_id,
-			Attributes: attrs,
-			Models: models,
-			Body: im_body,
+			SubjectId:   subject_id,
+			Attributes:  attrs,
+			Models:      models,
+			Body:        im_body,
 		}
 
 		records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
@@ -156,20 +155,20 @@ func main() {
 			logger.Warn("Failed to derive embeddings")
 			continue
 		}
-		
+
 		_, err = p_wr.Write(records)
-		
+
 		if err != nil {
 			logger.Error("Failed to write records", "url", im_url, "error", err)
 		}
-		
+
 		logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 	}
 
 	//
 
 	done_ch <- true
-	
+
 	p_wr.Flush()
 
 	err = p_wr.Close()

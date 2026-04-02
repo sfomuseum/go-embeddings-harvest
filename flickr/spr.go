@@ -10,8 +10,8 @@ import (
 	"github.com/aaronland/go-flickr-api/client"
 	parquet_go "github.com/parquet-go/parquet-go"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
+	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-embeddings-harvest"	
 	"github.com/tidwall/gjson"
 )
 
@@ -137,28 +137,28 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 	}
 
 	derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-		Provider: opts.Provider,
+		Provider:    opts.Provider,
 		DepictionId: id,
-		SubjectId: id,
-		Attributes: attrs,
-		Models: opts.Models,
-		Body: im_body,
+		SubjectId:   id,
+		Attributes:  attrs,
+		Models:      opts.Models,
+		Body:        im_body,
 	}
 
 	records, err := harvest.DeriveEmbeddingsRecords(ctx, opts.EmbeddingsClient, derive_opts)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	if len(records) > 0 {
-		
+
 		_, err = opts.ParquetWriter.Write(records)
-		
+
 		if err != nil {
 			return fmt.Errorf("Failed to append records to parquet writer for %s, %w", ph_url, err)
 		}
 	}
-	
+
 	return nil
 }

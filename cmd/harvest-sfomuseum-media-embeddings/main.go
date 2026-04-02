@@ -7,13 +7,10 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 	"strconv"
 
-	parquet_go "github.com/parquet-go/parquet-go"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddings-harvest"	
-	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 	"github.com/tidwall/gjson"
@@ -35,9 +32,9 @@ func main() {
 
 	fs := flagset.NewFlagSet("flickr")
 
-	fs.StringVar(&iterator_uri, "iterator-uri", "repo://?exclude=properties.edtf:deprecated=.*", "...")
-	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-media-collection", "...")
-	fs.StringVar(&provider, "provider", "sfomuseum-data-media-collection", "...")
+	fs.StringVar(&iterator_uri, "iterator-uri", "repo://?exclude=properties.edtf:deprecated=.*", "A registered go-whosonfirst-iterate/v3.Iterator URI.")
+	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-media-collection", "The source for the go-whosonfirst-iterate/v3.Iterator instance to process.")
+	fs.StringVar(&provider, "provider", "sfomuseum-data-media-collection", "The name of the provider to assign to each embeddings record.")
 
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
@@ -57,30 +54,18 @@ func main() {
 	if len(models) == 0 {
 		log.Fatal("No models defined")
 	}
-	
+
 	emb_cl, err := sfom_embeddings.NewEmbedder32(ctx, embeddings_client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create embeddings client, %v", err)
 	}
 
-	var wr io.WriteCloser
+	wr, err := harvest.NewWriter(output)
 
-	switch output {
-	case "-":
-		wr = os.Stdout
-	default:
-
-		w, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0644)
-
-		if err != nil {
-			log.Fatalf("Failed to open %s for writing, %v", output, err)
-		}
-
-		wr = w
+	if err != nil {
+		log.Fatalf("Failed to create writers, %v", err)
 	}
-
-	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
 
 	//
 
@@ -165,17 +150,17 @@ func main() {
 			continue
 		}
 
-		attrs := map[string]string {
-			"uri": im_url,			
+		attrs := map[string]string{
+			"uri": im_url,
 		}
-		
+
 		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-			Provider: provider,
+			Provider:    provider,
 			DepictionId: depiction_id,
-			SubjectId: subject_id,
-			Attributes: attrs,
-			Models: models,
-			Body: im_body,
+			SubjectId:   subject_id,
+			Attributes:  attrs,
+			Models:      models,
+			Body:        im_body,
 		}
 
 		records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
@@ -185,37 +170,24 @@ func main() {
 			continue
 		}
 
-		if len(records) > 0 {
-
-			_, err = p_wr.Write(records)
-
-			if err != nil {
-				logger.Error("Failed to write records", "url", im_url, "error", err)
-			}
-
-			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+		if len(records) == 0 {
+			logger.Warn("No embeddings records produced")
+			continue
 		}
-	}
 
-	//
-
-	p_wr.Flush()
-
-	err = p_wr.Close()
-
-	if err != nil {
-		log.Fatalf("Failed to close Parquet writer, %v", err)
-	}
-
-	switch output {
-	case "-":
-		// pass
-	default:
-		err = wr.Close()
+		_, err = wr.ParquetWriter.Write(records)
 
 		if err != nil {
-			log.Fatalf("Failed to close %s after writing, %v", output, err)
+			logger.Error("Failed to write records", "url", im_url, "error", err)
 		}
+
+		logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+	}
+
+	err = wr.Close()
+
+	if err != nil {
+		log.Fatalf("Failed to close writers, %v", err)
 	}
 
 }
