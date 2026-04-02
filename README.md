@@ -48,12 +48,34 @@ _Eventually embeddings for text-based sources will be supported but that hasn't 
 
 ## Tools
 
+The easiest way to get started is to run the handy `cli` Makefile target to build the available tools. For example:
+
 ```
 $> make cli
 go build -mod vendor -ldflags="-s -w" -o bin/harvest-flickr-embeddings cmd/harvest-flickr-embeddings/main.go
 go build -mod vendor -ldflags="-s -w" -o bin/harvest-nga-embeddings cmd/harvest-nga-embeddings/main.go
 go build -mod vendor -ldflags="-s -w" -o bin/harvest-sfomuseum-media-embeddings cmd/harvest-sfomuseum-media-embeddings/main.go
 go build -mod vendor -ldflags="-s -w" -o bin/harvest-sfomuseum-instagram-embeddings cmd/harvest-sfomuseum-instagram-embeddings/main.go
+```
+
+Each of these tools produces a Parquet file containing rows which map to the `Record` data structure described above. They have been designed to work in concert with tools like the [parquet-import](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) application which is designed to import these data files in a [sfomuseum/go-embeddingsdb](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) database server instance.
+
+For example to generate data using the Flickr API and then import in to an `embeddingsdb` database you might do something like this:	
+
+```
+$> cd /usr/local/src/go-embeddings-harvest
+$> ./bin/harvest-flickr-embeddings \
+	-flickr-client-uri file:///usr/local/flickr.txt \
+	-param user_id=49487266@N07 \
+	-param method=flickr.photosets.getPhotos \
+	-param photoset_id=72157710813888403 \
+	-provider flickr-49487266@N07 \
+	-spr-path photoset.photo \
+	-model s0,s1,s2 \
+	-output flickr.parquet \
+
+$> cd /usr/local/src/go-embeddingsdb
+$> ./bin/parquet-import -verbose -client-uri grpc://localhost:8081 /usr/local/src/go-embeddings-harvest/flickr.parquet
 ```
 
 ### harvest-flickr-embeddings
