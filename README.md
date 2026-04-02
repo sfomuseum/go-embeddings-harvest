@@ -38,6 +38,7 @@ Likewise, there are not conventions for what should be included in the `Attribut
 * A link back to an online representation of the subject (or the depiction)?
 * Perhaps a link to a IIIF manifest or some other machine-readable metadata?
 * Is it okay for multiple depictions to point back to a machine-readable document referencing the subject? Current practice rarely assumes machine-readable representations of depiction (image) assets.
+* Could Flickr-style "machine tags", with a convention-based set of known prefixes, be enough?
 
 The goal here is the establish the _least amount of metadata_ necessary to accurately reflect provenance and to provide avenues for machine-readable metadata to be derived on a case-by-case basis.
 
