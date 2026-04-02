@@ -155,7 +155,7 @@ _This_ package uses the [gocloud.dev/runtimevar](https://gocloud.dev/howto/runti
 #### See also
 
 * https://www.flickr.com/services/api/
-* github.com/aaronland/go-flickr-api
+* https://github.com/aaronland/go-flickr-api
 
 ### harvest-nga-embeddings
 
@@ -216,7 +216,7 @@ Usage:
 
 #### See also
 
-* github.com/sfomuseum-data/sfomuseum-data-socialmedia-instagram/
+* https://github.com/sfomuseum-data/sfomuseum-data-socialmedia-instagram/
 
 ### harvest-sfomuseum-media-embeddings
 
@@ -245,8 +245,8 @@ Usage:
 
 #### See also
 
-* github.com/sfomuseum-data/sfomuseum-data-media
-* github.com/sfomuseum-data/sfomuseum-data-media-collection
+* https://github.com/sfomuseum-data/sfomuseum-data-media
+* https://github.com/sfomuseum-data/sfomuseum-data-media-collection
 
 ## See also
 
