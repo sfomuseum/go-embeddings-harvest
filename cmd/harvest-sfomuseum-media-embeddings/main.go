@@ -61,7 +61,7 @@ func main() {
 		log.Fatalf("Failed to create embeddings client, %v", err)
 	}
 
-	wr, err := harvest.NewWriter(output)
+	wr, err := harvest.NewWriter(ctx, output)
 
 	if err != nil {
 		log.Fatalf("Failed to create writers, %v", err)

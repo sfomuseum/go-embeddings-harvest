@@ -21,8 +21,8 @@ type EmbeddingsForFlickrSPROptions struct {
 	Models []string
 	// The [sfom_embeddings.Embedder[float32]] instance to derive embeddings with.
 	EmbeddingsClient sfom_embeddings.Embedder[float32]
-	//
-	Writer *harvest.HarvestWriter
+	// The [harvest.ParquetWriter] instance used to record data.
+	Writer *harvest.ParquetWriter
 }
 
 // EmbeddingsForFlickrSPRPaginatedCallbackFunc returns a [go-flickr-api/client.ExecuteMethodPaginatedCallback] function

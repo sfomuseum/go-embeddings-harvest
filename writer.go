@@ -1,9 +1,11 @@
 package harvest
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -19,24 +21,35 @@ func NopWriteCloser(w io.Writer) io.WriteCloser {
 	return nopWriteCloser{w}
 }
 
-type HarvestWriter struct {
+// ParquetWriter is a convenience struct for wrapping the creation of both a Parquet "GenericWriter"
+// and the underlying [io.Writer] instance that it writes to.
+type ParquetWriter struct {
 	writer         io.WriteCloser
 	parquet_writer *parquet_go.GenericWriter[*embeddingsdb.Record]
 }
 
-func NewWriter(output string) (*HarvestWriter, error) {
+// NewWriter returns a new [ParquetWriter] instance configured using 'uri'. If 'uri' is "-"
+// then data written (to the writer) will be dispatched to STDOUT. Otherwise 'uri' will be
+// treated as the path to a file on the local filesystem.
+func NewWriter(ctx context.Context, uri string) (*ParquetWriter, error) {
 
 	var wr io.WriteCloser
 
-	switch output {
+	switch uri {
 	case "-":
 		wr = NopWriteCloser(os.Stdout)
 	default:
 
-		w, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0644)
+		abs_uri, err := filepath.Abs(uri)
 
 		if err != nil {
-			return nil, fmt.Errorf("Failed to open %s for writing, %w", output, err)
+			return nil, err
+		}
+
+		w, err := os.OpenFile(abs_uri, os.O_RDWR|os.O_CREATE, 0644)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to open %s for writing, %w", uri, err)
 		}
 
 		wr = w
@@ -44,29 +57,42 @@ func NewWriter(output string) (*HarvestWriter, error) {
 
 	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
 
-	h_wr := &HarvestWriter{
+	pw := &ParquetWriter{
 		writer:         wr,
 		parquet_writer: p_wr,
 	}
 
-	return h_wr, nil
+	return pw, nil
 }
 
-func (h *HarvestWriter) Write(rows []*embeddingsdb.Record) (int, error) {
-	return h.parquet_writer.Write(rows)
+// Write will dispatch 'rows' to the underlying Parquet `GenericWriter` instance.
+func (pw *ParquetWriter) Write(rows []*embeddingsdb.Record) (int, error) {
+	return pw.parquet_writer.Write(rows)
 }
 
-func (h *HarvestWriter) Close() error {
+// Writer returns the underlying [io.WriteCloser] instance.
+func (pw *ParquetWriter) Writer() io.WriteCloser {
+	return pw.writer
+}
 
-	h.parquet_writer.Flush()
+// ParquetWriter returns the underlying	Parquet	`GenericWriter`	instance.
+func (pw *ParquetWriter) PqrquetWriter() *parquet_go.GenericWriter[*embeddingsdb.Record] {
+	return pw.parquet_writer
+}
 
-	err := h.parquet_writer.Close()
+// Close will flush any remaining output and close both the underlying Parquet `GenericWriter`
+// and [io.WriteCloser] instances.
+func (pw *ParquetWriter) Close() error {
+
+	pw.parquet_writer.Flush()
+
+	err := pw.parquet_writer.Close()
 
 	if err != nil {
 		return fmt.Errorf("Failed to close Parquet writer, %w", err)
 	}
 
-	err = h.writer.Close()
+	err = pw.writer.Close()
 
 	if err != nil {
 		return fmt.Errorf("Failed to close writer, %w", err)
