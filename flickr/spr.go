@@ -126,7 +126,7 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 	im_rsp.Body.Close()
 
 	if err != nil {
-		return fmt.Errorf("Failed to read photo %s, %w", ph_url)
+		return fmt.Errorf("Failed to read photo %s, %w", ph_url, err)
 	}
 
 	attrs := map[string]string{
