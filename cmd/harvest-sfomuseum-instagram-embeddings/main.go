@@ -145,7 +145,13 @@ func main() {
 		}
 
 		attrs := map[string]string{
-			"uri": im_url,
+			"type": "image",
+			"preview": im_url,
+			"subject_url": "",
+			"subject_title": "",
+			"subject_creditline": "",
+			"provider_name": "SFO Museum",
+			"provider_url": "https://millsfield.sfomuseum.org/instagram",			
 		}
 
 		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{

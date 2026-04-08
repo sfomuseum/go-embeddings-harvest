@@ -124,7 +124,13 @@ func main() {
 		}
 
 		attrs := map[string]string{
-			"uri": im_url,
+			"type": "image",
+			"preview": im_url,
+			"subject_url": "",
+			"subject_title": "",
+			"subject_creditline": "",
+			"provider_name": "National Gallery of Art",
+			"provider_url": "https://www.nga.gov/",
 		}
 
 		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{

@@ -158,10 +158,18 @@ func main() {
 			continue
 		}
 
-		attrs := map[string]string{
-			"uri": im_url,
-		}
+		// These values depend on provider...
 
+		attrs := map[string]string{
+			"type": "image",
+			"preview": im_url,
+			"subject_url": "",
+			"subject_title": "",
+			"subject_creditline": "",
+			"provider_name": "SFO Museum",
+			"provider_url": "https://collection.sfomuseum.org",			
+		}
+		
 		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
 			Provider:    provider,
 			DepictionId: depiction_id,
