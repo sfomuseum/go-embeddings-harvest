@@ -16,8 +16,10 @@ import (
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 	"github.com/tidwall/gjson"
+	"github.com/whosonfirst/go-reader/v2"
 	"github.com/whosonfirst/go-whosonfirst-feature/properties"
 	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
+	wof_reader "github.com/whosonfirst/go-whosonfirst-reader/v2"
 	"github.com/whosonfirst/go-whosonfirst-uri"
 )
 
@@ -26,7 +28,8 @@ func main() {
 	var embeddings_client_uri string
 	var iterator_uri string
 	var iterator_source string
-	var provider string
+
+	var parent_reader_uri string
 
 	var workers int
 	var output string
@@ -37,7 +40,8 @@ func main() {
 
 	fs.StringVar(&iterator_uri, "iterator-uri", "repo://?exclude=properties.edtf:deprecated=.*", "A registered go-whosonfirst-iterate/v3.Iterator URI.")
 	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-media-collection", "The source for the go-whosonfirst-iterate/v3.Iterator instance to process.")
-	fs.StringVar(&provider, "provider", "sfomuseum-data-media-collection", "The name of the provider to assign to each embeddings record.")
+
+	fs.StringVar(&parent_reader_uri, "parent-reader-uri", "repo:///usr/local/data/sfomuseum-data-collection", "...")
 
 	fs.IntVar(&workers, "workers", 5, "The number of workers to use to fetch images (and derive embeddings) concurrently")
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
@@ -78,6 +82,12 @@ func main() {
 		log.Fatalf("Failed to create writers, %v", err)
 	}
 
+	parent_r, err := reader.NewReader(ctx, parent_reader_uri)
+
+	if err != nil {
+		log.Fatalf("Failed to create parent reader, %v", err)
+	}
+
 	//
 
 	iter, err := iterate.NewIterator(ctx, iterator_uri)
@@ -92,6 +102,7 @@ func main() {
 		throttle <- true
 	}
 
+	creditlines := new(sync.Map)
 	wg := new(sync.WaitGroup)
 
 	for rec, err := range iter.Iterate(ctx, iterator_source) {
@@ -146,6 +157,8 @@ func main() {
 				return
 			}
 
+			//
+
 			depiction_id := strconv.FormatInt(id, 10)
 			subject_id := strconv.FormatInt(parent_id, 10)
 
@@ -184,29 +197,31 @@ func main() {
 				return
 			}
 
-			var subject_url string
-			var subject_creditline string
+			subject_url := fmt.Sprintf("https://collection.sfomuseum.org/id/%s", subject_id)
+			subject_creditline := ""
 
-			switch provider {
-			case "sfomuseum-data-media":
-				subject_url = fmt.Sprintf("https://millsfield.sfomuseum.org/id/%s", subject_id)
-				subject_creditline = "SFO Museum"
-			case "sfomuseum-data-media-collection":
+			v, exists := creditlines.Load(parent_id)
 
-				subject_url = fmt.Sprintf("https://collection.sfomuseum.org/id/%s", subject_id)
+			if exists {
+				subject_creditline = v.(string)
+			} else {
 
-				creditline_rsp := gjson.GetBytes(body, "properties.sfomuseum:creditline")
+				parent_body, err := wof_reader.LoadBytes(ctx, parent_r, parent_id)
+
+				if err != nil {
+					logger.Error("Failed to read parent body", "parent id", parent_id, "error", err)
+					return
+				}
+
+				creditline_rsp := gjson.GetBytes(parent_body, "properties.sfomuseum:creditline")
 
 				if !creditline_rsp.Exists() {
-					logger.Error("Record is missing creditline")
+					logger.Error("Parent record is missing creditline", "parent id", parent_id)
 					return
 				}
 
 				subject_creditline = creditline_rsp.String()
-
-			default:
-				logger.Warn("Unknown or unsupported providers")
-				return
+				creditlines.Store(parent_id, subject_creditline)
 			}
 
 			attrs := map[string]string{
@@ -220,7 +235,7 @@ func main() {
 			}
 
 			derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-				Provider:    provider,
+				Provider:    "sfomuseum-data-media-collection",
 				DepictionId: depiction_id,
 				SubjectId:   subject_id,
 				Attributes:  attrs,
