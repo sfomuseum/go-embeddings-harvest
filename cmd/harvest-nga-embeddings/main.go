@@ -126,8 +126,6 @@ func main() {
 				Title:      row["title"],
 				Creditline: row["creditline"],
 			})
-
-			slog.Info("Store", "id", row["objectid"], "title", row["title"], "creditline", row["creditline"])
 		})
 	}
 
