@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/aaronland/go-flickr-api/client"
@@ -103,8 +104,33 @@ func main() {
 
 	args := &url.Values{}
 
+	extras := []string{
+		"owner_name",
+	}
+
 	for _, kv := range params {
-		args.Set(kv.Key(), kv.Value().(string))
+
+		switch kv.Key() {
+		case "extras":
+
+			// Ensure that extras contains "owner_name" in order to
+			// populate oembeddings attributes
+
+			str_extras := kv.Value().(string)
+
+			for _, e := range strings.Split(str_extras, ",") {
+				e = strings.TrimSpace(e)
+
+				if !slices.Contains(extras, e) {
+					extras = append(extras, e)
+				}
+			}
+
+			args.Set("extras", strings.Join(extras, ","))
+
+		default:
+			args.Set(kv.Key(), kv.Value().(string))
+		}
 	}
 
 	if args.Has("userid") {

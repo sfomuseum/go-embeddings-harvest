@@ -110,11 +110,13 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 
 	title := ph_rsp.Get("title").String()
 
+	owner_name := ph_rsp.Get("owner_name").String()
+	owner_id := ph_rsp.Get("owner").String()
+
 	logger := slog.Default()
 	logger = logger.With("id", id)
 
 	ph_url := fmt.Sprintf("https://live.staticflickr.com/%s/%s_%s.jpg", server, id, secret)
-	// logger.Debug("Fetch photo", "url", ph_url)
 
 	im_rsp, err := http.Get(ph_url)
 
@@ -130,8 +132,13 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 	}
 
 	attrs := map[string]string{
-		"uri":   ph_url,
-		"title": title,
+		"type":               "image",
+		"preview":            ph_url,
+		"subject_url":        fmt.Sprintf("https://flickr.com/photos/%s/%s", owner_id, id),
+		"subject_title":      title,
+		"subject_creditline": fmt.Sprintf(`Flickr member \"%s\"`, owner_name),
+		"provider_name":      "Flickr",
+		"provider_url":       "https://flickr.com",
 	}
 
 	derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
