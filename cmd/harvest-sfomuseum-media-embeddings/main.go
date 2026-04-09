@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
@@ -27,6 +28,7 @@ func main() {
 	var iterator_source string
 	var provider string
 
+	var workers int
 	var output string
 	var verbose bool
 	var models multi.MultiCSVString
@@ -37,6 +39,7 @@ func main() {
 	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-media-collection", "The source for the go-whosonfirst-iterate/v3.Iterator instance to process.")
 	fs.StringVar(&provider, "provider", "sfomuseum-data-media-collection", "The name of the provider to assign to each embeddings record.")
 
+	fs.IntVar(&workers, "workers", 5, "The number of workers to use to fetch images (and derive embeddings) concurrently")
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
 	fs.StringVar(&output, "output", "-", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
@@ -83,152 +86,171 @@ func main() {
 		log.Fatalf("Failed to create iterator, %v", err)
 	}
 
+	throttle := make(chan bool, workers)
+
+	for i := 0; i < workers; i++ {
+		throttle <- true
+	}
+
+	wg := new(sync.WaitGroup)
+
 	for rec, err := range iter.Iterate(ctx, iterator_source) {
 
 		if err != nil {
 			log.Fatalf("Iterator yielded an error, %v", err)
 		}
 
-		logger := slog.Default()
-		logger = logger.With("path", rec.Path)
+		<-throttle
 
-		id, uri_args, err := uri.ParseURI(rec.Path)
+		wg.Go(func() {
 
-		if err != nil {
-			logger.Error("Failed to parse path", "error", err)
-			continue
-		}
+			defer func() {
+				throttle <- true
+			}()
 
-		if uri_args.IsAlternate {
-			continue
-		}
+			logger := slog.Default()
+			logger = logger.With("path", rec.Path)
 
-		logger = logger.With("id", id)
+			id, uri_args, err := uri.ParseURI(rec.Path)
 
-		body, err := io.ReadAll(rec.Body)
-		rec.Body.Close()
-
-		if err != nil {
-			logger.Error("Failed to read record body", "error", err)
-			continue
-		}
-
-		parent_id, err := properties.ParentId(body)
-
-		if err != nil {
-			logger.Error("Failed to derive parent ID", "error", err)
-			continue
-		}
-
-		name, err := properties.Name(body)
-
-		if err != nil {
-			logger.Error("Failed to derive name", "error", err)
-			continue
-		}
-
-		depiction_id := strconv.FormatInt(id, 10)
-		subject_id := strconv.FormatInt(parent_id, 10)
-
-		secret_rsp := gjson.GetBytes(body, "properties.media:properties.sizes.n.secret")
-
-		if !secret_rsp.Exists() {
-			logger.Error("Failed to derive image secret")
-			continue
-		}
-
-		secret := secret_rsp.String()
-
-		tree, err := uri.Id2Path(id)
-
-		if err != nil {
-			logger.Error("Failed to derive image tree", "error", err)
-			continue
-		}
-
-		im_url := fmt.Sprintf("https://static.sfomuseum.org/media/%s/%d_%s_n.jpg", tree, id, secret)
-
-		logger.Debug("Fetch image", "url", im_url)
-
-		im_rsp, err := http.Get(im_url)
-
-		if err != nil {
-			logger.Error("Failed to retrieve image", "url", im_url, "error", err)
-			continue
-		}
-
-		im_body, err := io.ReadAll(im_rsp.Body)
-		im_rsp.Body.Close()
-
-		if err != nil {
-			logger.Error("Failed to read image", "url", im_url, "error", err)
-			continue
-		}
-
-		var subject_url string
-		var subject_creditline string
-
-		switch provider {
-		case "sfomuseum-data-media":
-			subject_url = fmt.Sprintf("https://millsfield.sfomuseum.org/id/%s", subject_id)
-			subject_creditline = "SFO Museum"
-		case "sfomuseum-data-media-collection":
-
-			subject_url = fmt.Sprintf("https://collection.sfomuseum.org/id/%s", subject_id)
-
-			creditline_rsp := gjson.GetBytes(body, "properties.sfomuseum:creditline")
-
-			if !creditline_rsp.Exists() {
-				logger.Error("Record is missing creditline")
-				continue
+			if err != nil {
+				logger.Error("Failed to parse path", "error", err)
+				return
 			}
 
-			subject_creditline = creditline_rsp.String()
+			if uri_args.IsAlternate {
+				return
+			}
 
-		default:
-			logger.Warn("Unknown or unsupported providers")
-			continue
-		}
+			logger = logger.With("id", id)
 
-		attrs := map[string]string{
-			"type":               "image",
-			"preview":            im_url,
-			"subject_url":        subject_url,
-			"subject_title":      name,
-			"subject_creditline": subject_creditline,
-			"provider_name":      "SFO Museum",
-			"provider_url":       "https://collection.sfomuseum.org",
-		}
+			body, err := io.ReadAll(rec.Body)
+			rec.Body.Close()
 
-		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-			Provider:    provider,
-			DepictionId: depiction_id,
-			SubjectId:   subject_id,
-			Attributes:  attrs,
-			Models:      models,
-			Body:        im_body,
-		}
+			if err != nil {
+				logger.Error("Failed to read record body", "error", err)
+				return
+			}
 
-		records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
+			parent_id, err := properties.ParentId(body)
 
-		if err != nil {
-			logger.Error("Failed to derive embeddings records", "error", err)
-			continue
-		}
+			if err != nil {
+				logger.Error("Failed to derive parent ID", "error", err)
+				return
+			}
 
-		if len(records) == 0 {
-			logger.Warn("No embeddings records produced")
-			continue
-		}
+			name, err := properties.Name(body)
 
-		_, err = wr.Write(records)
+			if err != nil {
+				logger.Error("Failed to derive name", "error", err)
+				return
+			}
 
-		if err != nil {
-			logger.Error("Failed to write records", "url", im_url, "error", err)
-		}
+			depiction_id := strconv.FormatInt(id, 10)
+			subject_id := strconv.FormatInt(parent_id, 10)
 
-		logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+			secret_rsp := gjson.GetBytes(body, "properties.media:properties.sizes.n.secret")
+
+			if !secret_rsp.Exists() {
+				logger.Error("Failed to derive image secret")
+				return
+			}
+
+			secret := secret_rsp.String()
+
+			tree, err := uri.Id2Path(id)
+
+			if err != nil {
+				logger.Error("Failed to derive image tree", "error", err)
+				return
+			}
+
+			im_url := fmt.Sprintf("https://static.sfomuseum.org/media/%s/%d_%s_n.jpg", tree, id, secret)
+
+			logger.Debug("Fetch image", "url", im_url)
+
+			im_rsp, err := http.Get(im_url)
+
+			if err != nil {
+				logger.Error("Failed to retrieve image", "url", im_url, "error", err)
+				return
+			}
+
+			im_body, err := io.ReadAll(im_rsp.Body)
+			im_rsp.Body.Close()
+
+			if err != nil {
+				logger.Error("Failed to read image", "url", im_url, "error", err)
+				return
+			}
+
+			var subject_url string
+			var subject_creditline string
+
+			switch provider {
+			case "sfomuseum-data-media":
+				subject_url = fmt.Sprintf("https://millsfield.sfomuseum.org/id/%s", subject_id)
+				subject_creditline = "SFO Museum"
+			case "sfomuseum-data-media-collection":
+
+				subject_url = fmt.Sprintf("https://collection.sfomuseum.org/id/%s", subject_id)
+
+				creditline_rsp := gjson.GetBytes(body, "properties.sfomuseum:creditline")
+
+				if !creditline_rsp.Exists() {
+					logger.Error("Record is missing creditline")
+					return
+				}
+
+				subject_creditline = creditline_rsp.String()
+
+			default:
+				logger.Warn("Unknown or unsupported providers")
+				return
+			}
+
+			attrs := map[string]string{
+				"type":               "image",
+				"preview":            im_url,
+				"subject_url":        subject_url,
+				"subject_title":      name,
+				"subject_creditline": subject_creditline,
+				"provider_name":      "SFO Museum",
+				"provider_url":       "https://collection.sfomuseum.org",
+			}
+
+			derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
+				Provider:    provider,
+				DepictionId: depiction_id,
+				SubjectId:   subject_id,
+				Attributes:  attrs,
+				Models:      models,
+				Body:        im_body,
+			}
+
+			records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
+
+			if err != nil {
+				logger.Error("Failed to derive embeddings records", "error", err)
+				return
+			}
+
+			if len(records) == 0 {
+				logger.Warn("No embeddings records produced")
+				return
+			}
+
+			_, err = wr.Write(records)
+
+			if err != nil {
+				logger.Error("Failed to write records", "url", im_url, "error", err)
+			}
+
+			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+		})
 	}
+
+	wg.Wait()
 
 	err = wr.Close()
 
