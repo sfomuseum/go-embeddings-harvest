@@ -30,6 +30,7 @@ func main() {
 	var objects string
 	var published_images string
 
+	var workers int
 	var output string
 	var verbose bool
 	var models multi.MultiCSVString
@@ -39,6 +40,7 @@ func main() {
 	fs.StringVar(&objects, "objects", "", "The path to the 'objects.csv' file contained in the NationalGalleryOfArt/opendata GitHub repository.")
 	fs.StringVar(&published_images, "published-images", "", "The path to the 'published_images.csv' file contained in the NationalGalleryOfArt/opendata GitHub repository.")
 
+	fs.IntVar(&workers, "workers", 5, "The number of workers to use to fetch images (and derive embeddings) concurrently")
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
 	fs.StringVar(&output, "output", "-", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
@@ -132,7 +134,14 @@ func main() {
 	objects_wg.Wait()
 
 	// Now fetch images
-	// TBD - do this concurrently in Go routines?
+
+	throttle := make(chan bool, workers)
+
+	for i := 0; i < workers; i++ {
+		throttle <- true
+	}
+
+	wg := new(sync.WaitGroup)
 
 	for row, err := range images_r.Iterate() {
 
@@ -140,86 +149,97 @@ func main() {
 			log.Fatalf("Images iterator yielded an error, %v", err)
 		}
 
-		count += 1
+		<-throttle
 
-		logger := slog.Default()
-		logger = logger.With("path", row["uuid"])
+		wg.Go(func() {
 
-		depiction_id := row["uuid"]
-		subject_id := row["depictstmsobjectid"]
-		im_url := row["iiifthumburl"]
+			defer func() {
+				throttle <- true
+			}()
 
-		logger.Debug("Fetch image", "url", im_url)
+			count += 1
 
-		im_rsp, err := http.Get(im_url)
+			logger := slog.Default()
+			logger = logger.With("path", row["uuid"])
 
-		if err != nil {
-			logger.Error("Failed to retrieve image", "url", im_url, "error", err)
-			continue
-		}
+			depiction_id := row["uuid"]
+			subject_id := row["depictstmsobjectid"]
+			im_url := row["iiifthumburl"]
 
-		im_body, err := io.ReadAll(im_rsp.Body)
-		im_rsp.Body.Close()
+			logger.Debug("Fetch image", "url", im_url)
 
-		if err != nil {
-			logger.Error("Failed to read image", "url", im_url, "error", err)
-			continue
-		}
+			im_rsp, err := http.Get(im_url)
 
-		// works: https://www.nga.gov/artworks/12198-symphony-white-no-1-white-girl
-		// does not work: https://www.nga.gov/artworks/12198
-		// works: purl.org/nga/collection/artobject/12198
-		// see also: https://github.com/NationalGalleryOfArt/opendata/issues/19
+			if err != nil {
+				logger.Error("Failed to retrieve image", "url", im_url, "error", err)
+				return
+			}
 
-		attrs := map[string]string{
-			"type":               "image",
-			"preview":            im_url,
-			"subject_url":        fmt.Sprintf("https://purl.org/nga/collection/artobject/%s", subject_id),
-			"subject_title":      "",
-			"subject_creditline": "",
-			"provider_name":      "National Gallery of Art",
-			"provider_url":       "https://www.nga.gov/",
-		}
+			im_body, err := io.ReadAll(im_rsp.Body)
+			im_rsp.Body.Close()
 
-		v, exists := objects_lookup.Load(subject_id)
+			if err != nil {
+				logger.Error("Failed to read image", "url", im_url, "error", err)
+				return
+			}
 
-		if !exists {
-			logger.Warn("Unable to load object info", "object id", subject_id)
-		} else {
-			obj_info := v.(*ObjectInfo)
-			attrs["subject_title"] = obj_info.Title
-			attrs["subject_creditline"] = obj_info.Creditline
-		}
+			// works: https://www.nga.gov/artworks/12198-symphony-white-no-1-white-girl
+			// does not work: https://www.nga.gov/artworks/12198
+			// works: purl.org/nga/collection/artobject/12198
+			// see also: https://github.com/NationalGalleryOfArt/opendata/issues/19
 
-		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-			Provider:    "nga",
-			DepictionId: depiction_id,
-			SubjectId:   subject_id,
-			Attributes:  attrs,
-			Models:      models,
-			Body:        im_body,
-		}
+			attrs := map[string]string{
+				"type":               "image",
+				"preview":            im_url,
+				"subject_url":        fmt.Sprintf("https://purl.org/nga/collection/artobject/%s", subject_id),
+				"subject_title":      "",
+				"subject_creditline": "",
+				"provider_name":      "National Gallery of Art",
+				"provider_url":       "https://www.nga.gov/",
+			}
 
-		records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
+			v, exists := objects_lookup.Load(subject_id)
 
-		if err != nil {
-			logger.Error("Failed to derive embeddings records", "error", err)
-			continue
-		}
+			if !exists {
+				logger.Warn("Unable to load object info", "object id", subject_id)
+			} else {
+				obj_info := v.(*ObjectInfo)
+				attrs["subject_title"] = obj_info.Title
+				attrs["subject_creditline"] = obj_info.Creditline
+			}
 
-		if len(records) == 0 {
-			logger.Warn("Failed to derive embeddings")
-			continue
-		}
+			derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
+				Provider:    "nga",
+				DepictionId: depiction_id,
+				SubjectId:   subject_id,
+				Attributes:  attrs,
+				Models:      models,
+				Body:        im_body,
+			}
 
-		_, err = wr.Write(records)
+			records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
 
-		if err != nil {
-			logger.Error("Failed to write records", "url", im_url, "error", err)
-		}
+			if err != nil {
+				logger.Error("Failed to derive embeddings records", "error", err)
+				return
+			}
 
-		logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+			if len(records) == 0 {
+				logger.Warn("Failed to derive embeddings")
+				return
+			}
+
+			_, err = wr.Write(records)
+
+			if err != nil {
+				logger.Error("Failed to write records", "url", im_url, "error", err)
+			}
+
+			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+		})
 	}
+
+	wg.Wait()
 
 	//
 
