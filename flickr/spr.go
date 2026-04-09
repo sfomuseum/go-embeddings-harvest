@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
-	
+
 	"github.com/aaronland/go-flickr-api/client"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
@@ -24,7 +24,7 @@ type EmbeddingsForFlickrSPROptions struct {
 	EmbeddingsClient sfom_embeddings.Embedder[float32]
 	// The [harvest.ParquetWriter] instance used to record data.
 	Writer *harvest.ParquetWriter
-	// 
+	//
 	Workers int
 }
 
@@ -91,24 +91,24 @@ func EmbeddingsForFlickrSPRArray(ctx context.Context, opts *EmbeddingsForFlickrS
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	
+
 	for _, ph_rsp := range photos_rsp.Array() {
 
-		<- throttle
+		<-throttle
 
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			break
 		default:
-			
+
 			wg.Go(func() {
-				
-				defer func(){
+
+				defer func() {
 					throttle <- true
 				}()
-				
+
 				err := EmbeddingsForFlickrSPR(ctx, opts, ph_rsp)
-				
+
 				if err != nil {
 					ph_err = err
 					cancel()
@@ -120,7 +120,7 @@ func EmbeddingsForFlickrSPRArray(ctx context.Context, opts *EmbeddingsForFlickrS
 	if ph_err != nil {
 		return ph_err
 	}
-	
+
 	wg.Wait()
 	return nil
 }

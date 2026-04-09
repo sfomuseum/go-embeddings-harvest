@@ -26,6 +26,7 @@ func main() {
 	var embeddings_client_uri string
 	var iterator_uri string
 	var iterator_source string
+	var provider string
 
 	var workers int
 	var output string
@@ -35,7 +36,8 @@ func main() {
 	fs := flagset.NewFlagSet("flickr")
 
 	fs.StringVar(&iterator_uri, "iterator-uri", "repo://?exclude=properties.edtf:deprecated=.*", "A registered go-whosonfirst-iterate/v3.Iterator URI.")
-	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-media", "The source for the go-whosonfirst-iterate/v3.Iterator instance to process.")
+	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-media-collection", "The source for the go-whosonfirst-iterate/v3.Iterator instance to process.")
+	fs.StringVar(&provider, "provider", "sfomuseum-data-media-collection", "The name of the provider to assign to each embeddings record.")
 
 	fs.IntVar(&workers, "workers", 5, "The number of workers to use to fetch images (and derive embeddings) concurrently")
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
@@ -182,8 +184,30 @@ func main() {
 				return
 			}
 
-			subject_url := fmt.Sprintf("https://millsfield.sfomuseum.org/id/%s", subject_id)
-			subject_creditline := "SFO Museum"
+			var subject_url string
+			var subject_creditline string
+
+			switch provider {
+			case "sfomuseum-data-media":
+				subject_url = fmt.Sprintf("https://millsfield.sfomuseum.org/id/%s", subject_id)
+				subject_creditline = "SFO Museum"
+			case "sfomuseum-data-media-collection":
+
+				subject_url = fmt.Sprintf("https://collection.sfomuseum.org/id/%s", subject_id)
+
+				creditline_rsp := gjson.GetBytes(body, "properties.sfomuseum:creditline")
+
+				if !creditline_rsp.Exists() {
+					logger.Error("Record is missing creditline")
+					return
+				}
+
+				subject_creditline = creditline_rsp.String()
+
+			default:
+				logger.Warn("Unknown or unsupported providers")
+				return
+			}
 
 			attrs := map[string]string{
 				"type":               "image",
@@ -196,7 +220,7 @@ func main() {
 			}
 
 			derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-				Provider:    "sfomuseum-data-media",
+				Provider:    provider,
 				DepictionId: depiction_id,
 				SubjectId:   subject_id,
 				Attributes:  attrs,
