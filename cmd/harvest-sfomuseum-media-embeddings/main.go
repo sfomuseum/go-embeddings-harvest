@@ -103,6 +103,8 @@ func main() {
 			continue
 		}
 
+		logger = logger.With("id", id)
+
 		body, err := io.ReadAll(rec.Body)
 		rec.Body.Close()
 
@@ -118,7 +120,12 @@ func main() {
 			continue
 		}
 
-		logger = logger.With("id", id)
+		name, err := properties.Name(body)
+
+		if err != nil {
+			logger.Error("Failed to derive name", "error", err)
+			continue
+		}
 
 		depiction_id := strconv.FormatInt(id, 10)
 		subject_id := strconv.FormatInt(parent_id, 10)
@@ -158,14 +165,37 @@ func main() {
 			continue
 		}
 
-		// These values depend on provider...
+		var subject_url string
+		var subject_creditline string
+
+		switch provider {
+		case "sfomuseum-data-media":
+			subject_url = fmt.Sprintf("https://millsfield.sfomuseum.org/id/%s", subject_id)
+			subject_creditline = "SFO Museum"
+		case "sfomuseum-data-media-collection":
+
+			subject_url = fmt.Sprintf("https://collection.sfomuseum.org/id/%s", subject_id)
+
+			creditline_rsp := gjson.GetBytes(body, "properties.sfomuseum:creditline")
+
+			if !creditline_rsp.Exists() {
+				logger.Error("Record is missing creditline")
+				continue
+			}
+
+			subject_creditline = creditline_rsp.String()
+
+		default:
+			logger.Warn("Unknown or unsupported providers")
+			continue
+		}
 
 		attrs := map[string]string{
 			"type":               "image",
 			"preview":            im_url,
-			"subject_url":        "",
-			"subject_title":      "",
-			"subject_creditline": "",
+			"subject_url":        subject_url,
+			"subject_title":      name,
+			"subject_creditline": subject_creditline,
 			"provider_name":      "SFO Museum",
 			"provider_url":       "https://collection.sfomuseum.org",
 		}

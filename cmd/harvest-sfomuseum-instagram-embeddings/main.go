@@ -110,6 +110,13 @@ func main() {
 
 		logger = logger.With("id", id)
 
+		name, err := properties.Name(body)
+
+		if err != nil {
+			logger.Error("Failed to derive name", "error", err)
+			continue
+		}
+
 		id_rsp := gjson.GetBytes(body, "properties.instagram:post.media_id")
 
 		if !id_rsp.Exists() {
@@ -119,6 +126,15 @@ func main() {
 
 		media_id := id_rsp.String()
 		logger = logger.With("media id", media_id)
+
+		taken_rsp := gjson.GetBytes(body, "properties.instagram:post.taken_at")
+
+		if !taken_rsp.Exists() {
+			logger.Error("Failed to derive taken at date")
+			continue
+		}
+
+		taken_at := taken_rsp.String()
 
 		depiction_id := strconv.FormatInt(id, 10)
 		subject_id := media_id
@@ -147,9 +163,9 @@ func main() {
 		attrs := map[string]string{
 			"type":               "image",
 			"preview":            im_url,
-			"subject_url":        "",
-			"subject_title":      "",
-			"subject_creditline": "",
+			"subject_url":        fmt.Sprintf("https://millsfield.sfomuseum.org/instagram/%s", subject_id),
+			"subject_title":      name,
+			"subject_creditline": fmt.Sprintf("SFO Museum Instagram post from %s", taken_at),
 			"provider_name":      "SFO Museum",
 			"provider_url":       "https://millsfield.sfomuseum.org/instagram",
 		}

@@ -106,6 +106,9 @@ func main() {
 		}
 	}()
 
+	// First, iterate through all the objects and capture title and creditline information
+	// for inclusion below
+
 	objects_wg := new(sync.WaitGroup)
 	objects_lookup := new(sync.Map)
 
@@ -127,6 +130,9 @@ func main() {
 	}
 
 	objects_wg.Wait()
+
+	// Now fetch images
+	// TBD - do this concurrently in Go routines?
 
 	for row, err := range images_r.Iterate() {
 
