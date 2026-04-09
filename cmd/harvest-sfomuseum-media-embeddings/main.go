@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
@@ -49,7 +49,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	flagset.Parse(fs)
 
 	if verbose {
@@ -161,15 +161,15 @@ func main() {
 		// These values depend on provider...
 
 		attrs := map[string]string{
-			"type": "image",
-			"preview": im_url,
-			"subject_url": "",
-			"subject_title": "",
+			"type":               "image",
+			"preview":            im_url,
+			"subject_url":        "",
+			"subject_title":      "",
 			"subject_creditline": "",
-			"provider_name": "SFO Museum",
-			"provider_url": "https://collection.sfomuseum.org",			
+			"provider_name":      "SFO Museum",
+			"provider_url":       "https://collection.sfomuseum.org",
 		}
-		
+
 		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
 			Provider:    provider,
 			DepictionId: depiction_id,

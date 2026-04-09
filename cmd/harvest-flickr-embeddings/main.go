@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"io"
 	"log"
 	"log/slog"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/aaronland/go-flickr-api/client"
@@ -53,7 +53,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	flagset.Parse(fs)
 
 	if verbose {

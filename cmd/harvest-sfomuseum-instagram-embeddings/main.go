@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
-	"os"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
@@ -47,7 +47,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	flagset.Parse(fs)
 
 	if verbose {
@@ -145,13 +145,13 @@ func main() {
 		}
 
 		attrs := map[string]string{
-			"type": "image",
-			"preview": im_url,
-			"subject_url": "",
-			"subject_title": "",
+			"type":               "image",
+			"preview":            im_url,
+			"subject_url":        "",
+			"subject_title":      "",
 			"subject_creditline": "",
-			"provider_name": "SFO Museum",
-			"provider_url": "https://millsfield.sfomuseum.org/instagram",			
+			"provider_name":      "SFO Museum",
+			"provider_url":       "https://millsfield.sfomuseum.org/instagram",
 		}
 
 		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
