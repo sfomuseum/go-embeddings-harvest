@@ -6,7 +6,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-
+	"sync"
+	
 	"github.com/aaronland/go-flickr-api/client"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
@@ -23,6 +24,8 @@ type EmbeddingsForFlickrSPROptions struct {
 	EmbeddingsClient sfom_embeddings.Embedder[float32]
 	// The [harvest.ParquetWriter] instance used to record data.
 	Writer *harvest.ParquetWriter
+	// 
+	Workers int
 }
 
 // EmbeddingsForFlickrSPRPaginatedCallbackFunc returns a [go-flickr-api/client.ExecuteMethodPaginatedCallback] function
@@ -71,15 +74,54 @@ func EmbeddingsForFlickrSPRReader(ctx context.Context, emb_opts *EmbeddingsForFl
 // EmbeddingsForFlickrSPRArray derives embeddings for a list of Flickr SPR results encoded in a [gjson.Result].
 func EmbeddingsForFlickrSPRArray(ctx context.Context, opts *EmbeddingsForFlickrSPROptions, photos_rsp gjson.Result) error {
 
+	workers := 1
+
+	if opts.Workers > 1 {
+		workers = opts.Workers
+	}
+
+	wg := new(sync.WaitGroup)
+	throttle := make(chan bool, workers)
+
+	for i := 0; i < workers; i++ {
+		throttle <- true
+	}
+
+	var ph_err error
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	
 	for _, ph_rsp := range photos_rsp.Array() {
 
-		err := EmbeddingsForFlickrSPR(ctx, opts, ph_rsp)
+		<- throttle
 
-		if err != nil {
-			return err
+		select {
+		case <- ctx.Done():
+			break
+		default:
+			
+			wg.Go(func() {
+				
+				defer func(){
+					throttle <- true
+				}()
+				
+				err := EmbeddingsForFlickrSPR(ctx, opts, ph_rsp)
+				
+				if err != nil {
+					ph_err = err
+					cancel()
+				}
+			})
 		}
 	}
 
+	if ph_err != nil {
+		return ph_err
+	}
+	
+	wg.Wait()
 	return nil
 }
 
