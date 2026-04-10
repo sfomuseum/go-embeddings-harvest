@@ -3,17 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"io"
 	"log"
 	"log/slog"
 	"net/url"
+	"os"
+	"slices"
 	"strings"
 
 	"github.com/aaronland/go-flickr-api/client"
 	"github.com/aaronland/gocloud/runtimevar"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddings-harvest"
+	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-embeddings-harvest/flickr"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
@@ -53,7 +54,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	flagset.Parse(fs)
 
 	if verbose {
@@ -86,7 +87,7 @@ func main() {
 		log.Fatalf("Failed to create embeddings client, %v", err)
 	}
 
-	wr, err := harvest.NewWriter(ctx, output)
+	wr, err := parquet.NewWriter(ctx, output)
 
 	if err != nil {
 		log.Fatalf("Failed to create new writer, %v", err)
@@ -103,8 +104,33 @@ func main() {
 
 	args := &url.Values{}
 
+	extras := []string{
+		"owner_name",
+	}
+
 	for _, kv := range params {
-		args.Set(kv.Key(), kv.Value().(string))
+
+		switch kv.Key() {
+		case "extras":
+
+			// Ensure that extras contains "owner_name" in order to
+			// populate oembeddings attributes
+
+			str_extras := kv.Value().(string)
+
+			for _, e := range strings.Split(str_extras, ",") {
+				e = strings.TrimSpace(e)
+
+				if !slices.Contains(extras, e) {
+					extras = append(extras, e)
+				}
+			}
+
+			args.Set("extras", strings.Join(extras, ","))
+
+		default:
+			args.Set(kv.Key(), kv.Value().(string))
+		}
 	}
 
 	if args.Has("userid") {

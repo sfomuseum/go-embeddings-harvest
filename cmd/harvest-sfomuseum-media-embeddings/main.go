@@ -4,17 +4,19 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
+	"sync"
 
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddings-harvest"
+	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 	"github.com/tidwall/gjson"
+	"github.com/sfomuseum/go-embeddings-harvest"		
 	"github.com/whosonfirst/go-whosonfirst-feature/properties"
 	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
 	"github.com/whosonfirst/go-whosonfirst-uri"
@@ -25,8 +27,8 @@ func main() {
 	var embeddings_client_uri string
 	var iterator_uri string
 	var iterator_source string
-	var provider string
 
+	var workers int
 	var output string
 	var verbose bool
 	var models multi.MultiCSVString
@@ -34,9 +36,9 @@ func main() {
 	fs := flagset.NewFlagSet("flickr")
 
 	fs.StringVar(&iterator_uri, "iterator-uri", "repo://?exclude=properties.edtf:deprecated=.*", "A registered go-whosonfirst-iterate/v3.Iterator URI.")
-	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-media-collection", "The source for the go-whosonfirst-iterate/v3.Iterator instance to process.")
-	fs.StringVar(&provider, "provider", "sfomuseum-data-media-collection", "The name of the provider to assign to each embeddings record.")
+	fs.StringVar(&iterator_source, "iterator-source", "/usr/local/data/sfomuseum-data-media", "The source for the go-whosonfirst-iterate/v3.Iterator instance to process.")
 
+	fs.IntVar(&workers, "workers", 5, "The number of workers to use to fetch images (and derive embeddings) concurrently")
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
 	fs.StringVar(&output, "output", "-", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
@@ -49,7 +51,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	flagset.Parse(fs)
 
 	if verbose {
@@ -69,7 +71,7 @@ func main() {
 		log.Fatalf("Failed to create embeddings client, %v", err)
 	}
 
-	wr, err := harvest.NewWriter(ctx, output)
+	wr, err := parquet.NewWriter(ctx, output)
 
 	if err != nil {
 		log.Fatalf("Failed to create writers, %v", err)
@@ -83,114 +85,151 @@ func main() {
 		log.Fatalf("Failed to create iterator, %v", err)
 	}
 
+	throttle := make(chan bool, workers)
+
+	for i := 0; i < workers; i++ {
+		throttle <- true
+	}
+
+	wg := new(sync.WaitGroup)
+
 	for rec, err := range iter.Iterate(ctx, iterator_source) {
 
 		if err != nil {
 			log.Fatalf("Iterator yielded an error, %v", err)
 		}
 
-		logger := slog.Default()
-		logger = logger.With("path", rec.Path)
+		<-throttle
 
-		id, uri_args, err := uri.ParseURI(rec.Path)
+		wg.Go(func() {
 
-		if err != nil {
-			logger.Error("Failed to parse path", "error", err)
-			continue
-		}
+			defer func() {
+				throttle <- true
+			}()
 
-		if uri_args.IsAlternate {
-			continue
-		}
+			logger := slog.Default()
+			logger = logger.With("path", rec.Path)
 
-		body, err := io.ReadAll(rec.Body)
-		rec.Body.Close()
+			id, uri_args, err := uri.ParseURI(rec.Path)
 
-		if err != nil {
-			logger.Error("Failed to read record body", "error", err)
-			continue
-		}
+			if err != nil {
+				logger.Error("Failed to parse path", "error", err)
+				return
+			}
 
-		parent_id, err := properties.ParentId(body)
+			if uri_args.IsAlternate {
+				return
+			}
 
-		if err != nil {
-			logger.Error("Failed to derive parent ID", "error", err)
-			continue
-		}
+			logger = logger.With("id", id)
 
-		logger = logger.With("id", id)
+			body, err := io.ReadAll(rec.Body)
+			rec.Body.Close()
 
-		depiction_id := strconv.FormatInt(id, 10)
-		subject_id := strconv.FormatInt(parent_id, 10)
+			if err != nil {
+				logger.Error("Failed to read record body", "error", err)
+				return
+			}
 
-		secret_rsp := gjson.GetBytes(body, "properties.media:properties.sizes.n.secret")
+			parent_id, err := properties.ParentId(body)
 
-		if !secret_rsp.Exists() {
-			logger.Error("Failed to derive image secret")
-			continue
-		}
+			if err != nil {
+				logger.Error("Failed to derive parent ID", "error", err)
+				return
+			}
 
-		secret := secret_rsp.String()
+			name, err := properties.Name(body)
 
-		tree, err := uri.Id2Path(id)
+			if err != nil {
+				logger.Error("Failed to derive name", "error", err)
+				return
+			}
 
-		if err != nil {
-			logger.Error("Failed to derive image tree", "error", err)
-			continue
-		}
+			depiction_id := strconv.FormatInt(id, 10)
+			subject_id := strconv.FormatInt(parent_id, 10)
 
-		im_url := fmt.Sprintf("https://static.sfomuseum.org/media/%s/%d_%s_n.jpg", tree, id, secret)
+			secret_rsp := gjson.GetBytes(body, "properties.media:properties.sizes.n.secret")
 
-		logger.Debug("Fetch image", "url", im_url)
+			if !secret_rsp.Exists() {
+				logger.Error("Failed to derive image secret")
+				return
+			}
 
-		im_rsp, err := http.Get(im_url)
+			secret := secret_rsp.String()
 
-		if err != nil {
-			logger.Error("Failed to retrieve image", "url", im_url, "error", err)
-			continue
-		}
+			tree, err := uri.Id2Path(id)
 
-		im_body, err := io.ReadAll(im_rsp.Body)
-		im_rsp.Body.Close()
+			if err != nil {
+				logger.Error("Failed to derive image tree", "error", err)
+				return
+			}
 
-		if err != nil {
-			logger.Error("Failed to read image", "url", im_url, "error", err)
-			continue
-		}
+			im_url := fmt.Sprintf("https://static.sfomuseum.org/media/%s/%d_%s_n.jpg", tree, id, secret)
 
-		attrs := map[string]string{
-			"uri": im_url,
-		}
+			logger.Debug("Fetch image", "url", im_url)
 
-		derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-			Provider:    provider,
-			DepictionId: depiction_id,
-			SubjectId:   subject_id,
-			Attributes:  attrs,
-			Models:      models,
-			Body:        im_body,
-		}
+			im_rsp, err := http.Get(im_url)
 
-		records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
+			if err != nil {
+				logger.Error("Failed to retrieve image", "url", im_url, "error", err)
+				return
+			}
 
-		if err != nil {
-			logger.Error("Failed to derive embeddings records", "error", err)
-			continue
-		}
+			im_body, err := io.ReadAll(im_rsp.Body)
+			im_rsp.Body.Close()
 
-		if len(records) == 0 {
-			logger.Warn("No embeddings records produced")
-			continue
-		}
+			if err != nil {
+				logger.Error("Failed to read image", "url", im_url, "error", err)
+				return
+			}
 
-		_, err = wr.Write(records)
+			subject_url := fmt.Sprintf("https://millsfield.sfomuseum.org/id/%s", subject_id)
+			subject_creditline := "SFO Museum"
 
-		if err != nil {
-			logger.Error("Failed to write records", "url", im_url, "error", err)
-		}
+			attrs := map[string]string{
+				"type":               "image",
+				"preview":            im_url,
+				"subject_url":        subject_url,
+				"subject_title":      name,
+				"subject_creditline": subject_creditline,
+				"provider_name":      "SFO Museum",
+				"provider_url":       "https://collection.sfomuseum.org",
+			}
 
-		logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+			derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
+				Provider:    "sfomuseum-data-media",
+				DepictionId: depiction_id,
+				SubjectId:   subject_id,
+				Attributes:  attrs,
+				Models:      models,
+				Body:        im_body,
+			}
+
+			records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
+
+			if err != nil {
+				logger.Error("Failed to derive embeddings records", "error", err)
+				return
+			}
+
+			if len(records) == 0 {
+				logger.Warn("No embeddings records produced")
+				return
+			}
+
+			_, err = wr.Write(records)
+
+			if err != nil {
+				logger.Error("Failed to write records", "url", im_url, "error", err)
+			}
+
+			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+		})
+
+		wr.Flush()
 	}
+
+	wg.Wait()
 
 	err = wr.Close()
 

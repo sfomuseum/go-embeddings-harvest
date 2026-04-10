@@ -1,0 +1,3 @@
+{{ define "sqlite_matroyshka" -}}
+CREATE VIRTUAL TABLE {{ .TableName }} USING vec0(embedding float[ {{ .Dimensions }} ]);
+{{ end -}}

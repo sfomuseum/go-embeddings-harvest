@@ -6,10 +6,12 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/aaronland/go-flickr-api/client"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddings-harvest"
+	"github.com/sfomuseum/go-embeddingsdb/parquet"
+	"github.com/sfomuseum/go-embeddings-harvest"	
 	"github.com/tidwall/gjson"
 )
 
@@ -21,8 +23,10 @@ type EmbeddingsForFlickrSPROptions struct {
 	Models []string
 	// The [sfom_embeddings.Embedder[float32]] instance to derive embeddings with.
 	EmbeddingsClient sfom_embeddings.Embedder[float32]
-	// The [harvest.ParquetWriter] instance used to record data.
-	Writer *harvest.ParquetWriter
+	// The [parquet.ParquetWriter] instance used to record data.
+	Writer *parquet.ParquetWriter
+	//
+	Workers int
 }
 
 // EmbeddingsForFlickrSPRPaginatedCallbackFunc returns a [go-flickr-api/client.ExecuteMethodPaginatedCallback] function
@@ -71,15 +75,54 @@ func EmbeddingsForFlickrSPRReader(ctx context.Context, emb_opts *EmbeddingsForFl
 // EmbeddingsForFlickrSPRArray derives embeddings for a list of Flickr SPR results encoded in a [gjson.Result].
 func EmbeddingsForFlickrSPRArray(ctx context.Context, opts *EmbeddingsForFlickrSPROptions, photos_rsp gjson.Result) error {
 
+	workers := 1
+
+	if opts.Workers > 1 {
+		workers = opts.Workers
+	}
+
+	wg := new(sync.WaitGroup)
+	throttle := make(chan bool, workers)
+
+	for i := 0; i < workers; i++ {
+		throttle <- true
+	}
+
+	var ph_err error
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	for _, ph_rsp := range photos_rsp.Array() {
 
-		err := EmbeddingsForFlickrSPR(ctx, opts, ph_rsp)
+		<-throttle
 
-		if err != nil {
-			return err
+		select {
+		case <-ctx.Done():
+			break
+		default:
+
+			wg.Go(func() {
+
+				defer func() {
+					throttle <- true
+				}()
+
+				err := EmbeddingsForFlickrSPR(ctx, opts, ph_rsp)
+
+				if err != nil {
+					ph_err = err
+					cancel()
+				}
+			})
 		}
 	}
 
+	if ph_err != nil {
+		return ph_err
+	}
+
+	wg.Wait()
 	return nil
 }
 
@@ -110,11 +153,13 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 
 	title := ph_rsp.Get("title").String()
 
+	owner_name := ph_rsp.Get("owner_name").String()
+	owner_id := ph_rsp.Get("owner").String()
+
 	logger := slog.Default()
 	logger = logger.With("id", id)
 
 	ph_url := fmt.Sprintf("https://live.staticflickr.com/%s/%s_%s.jpg", server, id, secret)
-	// logger.Debug("Fetch photo", "url", ph_url)
 
 	im_rsp, err := http.Get(ph_url)
 
@@ -130,8 +175,13 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 	}
 
 	attrs := map[string]string{
-		"uri":   ph_url,
-		"title": title,
+		"type":               "image",
+		"preview":            ph_url,
+		"subject_url":        fmt.Sprintf("https://flickr.com/photos/%s/%s", owner_id, id),
+		"subject_title":      title,
+		"subject_creditline": fmt.Sprintf(`Flickr member \"%s\"`, owner_name),
+		"provider_name":      "Flickr",
+		"provider_url":       "https://flickr.com",
 	}
 
 	derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
@@ -156,6 +206,8 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 		if err != nil {
 			return fmt.Errorf("Failed to append records to parquet writer for %s, %w", ph_url, err)
 		}
+
+		opts.Writer.Flush()
 	}
 
 	return nil
