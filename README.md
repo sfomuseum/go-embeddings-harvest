@@ -172,12 +172,16 @@ Usage:
     	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
   -model value
     	One or more models to derive embeddings for. This may also be a comma-separated list.
+  -objects string
+    	The path to the 'objects.csv' file contained in the NationalGalleryOfArt/opendata GitHub repository.
   -output string
     	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
   -published-images string
     	The path to the 'published_images.csv' file contained in the NationalGalleryOfArt/opendata GitHub repository.
   -verbose
     	Enable verbose (debug) logging.
+  -workers int
+    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
 ```
 
 For example:
@@ -198,10 +202,10 @@ $> ./bin/harvest-nga-embeddings \
 Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-socialmedia-instagram data repositories (aka "Instragram photos").
 
 ```
-$> bin/harvest-sfomuseum-instagram-embeddings  -h
+$> ./bin/harvest-sfomuseum-instagram-embeddings -h
 Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-socialmedia-instagram data repositories (aka "Instragram photos").
 Usage:
-	bin/harvest-sfomuseum-instagram-embeddings [options]Valid options are:
+	./bin/harvest-sfomuseum-instagram-embeddings [options]Valid options are:
   -embeddings-client-uri string
     	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
   -iterator-source string
@@ -214,6 +218,8 @@ Usage:
     	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
   -verbose
     	Enable verbose (debug) logging.
+  -workers int
+    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
 ```
 
 #### See also
@@ -222,13 +228,42 @@ Usage:
 
 ### harvest-sfomuseum-media-embeddings
 
-Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media* data repositorie.
+Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media data repository.
 
 ```
-$> bin/harvest-sfomuseum-media-embeddings -h
-Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media* data repositorie.
+$> ./bin/harvest-sfomuseum-media-embeddings -h
+Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media data repository.
 Usage:
-	bin/harvest-sfomuseum-media-embeddings [options]Valid options are:
+	./bin/harvest-sfomuseum-media-embeddings [options]Valid options are:
+  -embeddings-client-uri string
+    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
+  -iterator-source string
+    	The source for the go-whosonfirst-iterate/v3.Iterator instance to process. (default "/usr/local/data/sfomuseum-data-media")
+  -iterator-uri string
+    	A registered go-whosonfirst-iterate/v3.Iterator URI. (default "repo://?exclude=properties.edtf:deprecated=.*")
+  -model value
+    	One or more models to derive embeddings for. This may also be a comma-separated list.
+  -output string
+    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
+  -verbose
+    	Enable verbose (debug) logging.
+  -workers int
+    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
+```
+
+#### See also
+
+* https://github.com/sfomuseum-data/sfomuseum-data-media
+
+### harvest-sfomuseum-media-collection-embeddings
+
+Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media-collection data repository.
+
+```
+$> ./bin/harvest-sfomuseum-media-collection-embeddings -h
+Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media-collection data repository.
+Usage:
+	./bin/harvest-sfomuseum-media-collection-embeddings [options]Valid options are:
   -embeddings-client-uri string
     	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
   -iterator-source string
@@ -239,15 +274,16 @@ Usage:
     	One or more models to derive embeddings for. This may also be a comma-separated list.
   -output string
     	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
-  -provider string
-    	The name of the provider to assign to each embeddings record. (default "sfomuseum-data-media-collection")
+  -parent-reader-uri string
+    	... (default "repo:///usr/local/data/sfomuseum-data-collection")
   -verbose
     	Enable verbose (debug) logging.
+  -workers int
+    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
 ```
 
 #### See also
 
-* https://github.com/sfomuseum-data/sfomuseum-data-media
 * https://github.com/sfomuseum-data/sfomuseum-data-media-collection
 
 ## See also
