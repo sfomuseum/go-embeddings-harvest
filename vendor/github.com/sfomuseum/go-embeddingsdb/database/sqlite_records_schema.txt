@@ -1,0 +1,16 @@
+{{ define "sqlite_records" -}}
+CREATE TABLE {{ .TableName  }} (
+       id INTEGER PRIMARY KEY,
+       provider TEXT,
+       depiction_id TEXT,
+       subject_id TEXT,
+       model TEXT,
+       attributes TEXT,
+       created INTEGER,
+       lastmodified INTEGER
+);
+
+CREATE UNIQUE INDEX id_model ON {{ .TableName }} (provider, depiction_id, model);
+CREATE INDEX by_model ON {{ .TableName }} (model, provider, created);
+CREATE INDEX by_lastmod ON {{ .TableName }} (lastmodified);
+{{ end -}}

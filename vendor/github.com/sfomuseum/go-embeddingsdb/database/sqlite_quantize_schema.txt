@@ -1,0 +1,3 @@
+{{ define "sqlite_quantize" -}}
+CREATE VIRTUAL TABLE {{ .TableName }} USING vec0(embedding bit[ {{ .Dimensions }} ]);
+{{ end -}}

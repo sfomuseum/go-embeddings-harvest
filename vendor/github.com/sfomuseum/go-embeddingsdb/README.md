@@ -35,7 +35,8 @@ type Record struct {
 	Embeddings []float32 `json:"embeddings"`
 	// Created is the Unix timestamp when Embeddings were generated.
 	Created int64 `json:"created"`
-	// Attributes is an arbitrary map of key-value properties associated with the embeddings.
+	// Attributes is an arbitrary map of key-value properties associated with the embeddings. Record attributes
+	// are encouraged to include the required [OEmbeddings] fields but this is not a requirement.
 	Attributes map[string]string `json:"attributes"`
 }
 ```
@@ -111,6 +112,59 @@ type Client interface {
 	Providers(context.Context) ([]string, error)
 }
 ```
+
+### OEmbeddings
+
+_Note: "OEmbeddings" should still be considered work in progress and subject to review and suggestions._
+
+OEmbeddings defines a model for the _least_ amount of metadata to be associated with a vector embedding record in order to allow a preview of the content used to create the embeddings and to display provenance for that content with links back to the subject depicted in the content on a provider's website.
+
+As the name suggests it is modeled in spirit after the [OEmbed specification](https://oembed.com/) which descibes itself as "a format for allowing an embedded representation of a URL on third party sites.". The `Oembeddings` structure (propeties) MAY be present in the free-form "attributes" dictionary of a `Record` instance but is not required.
+
+```
+type OEmbeddings struct {
+	// The type of material used to create the vector embeddings. Expected to be "image" or "text".
+	Type string `json:"type"`
+	// The preview content for the vector embeddings. If `Type` is "text" then this is expected to be a string. If `Type` is "image" this is expected to be a string confirming to the JSON Schema "uri" type.
+	Preview string `json:"preview"`
+	// A web page (or resource) for the depiction used to create the vector embeddings.
+	DepictionURL string `json:"depiction_url,omitempty"`
+	// A web page (or resource) for the subject of the depiction used to create the vector embeddings.
+	SubjectURL string `json:"subject_url"`
+	// The title of the subject of the depiction.
+	SubjectTitle string `json:"subject_title"`
+	// The creditline or attribution for the subject of the depiction.
+	SubjectCreditline string `json:"subject_creditline"`
+	// The name of the provider (holder) of the subject being depicted.
+	ProviderName string `json:"provider_name"`
+	// The primary web page for the provider (holder) of the subject being depicted.
+	ProviderURL string `json:"provider_url"`
+}
+```
+
+#### JSON Schema
+
+There is a [JSON Schema document](oembeddings/oembeddings.json) for validating an "attributes" dictionary to ensure that it contains the required fields for an `OEmbeddings` data structure.
+
+#### WebAssembly
+
+There is also an `oembeddings_validate` WebAssembly (WASM) binary for use with JavaScript. For example:
+
+```
+const input = document.querySelector("#input");
+const feedback = document.querySelector("#feedback");
+
+const oe = input.value;
+
+oembeddings_validate(oe).then((rsp) => {
+	feedback.innerText = "Document validates as OEmbeddings";
+}).catch((err) => {
+	console.error("Validation failed");
+	feedback.innerText = "Validation failed: " + err;
+});
+```
+
+The WASM binary needs to be built manually using the `make wasmjs` Makefile target. See the [oembeddings/www](oembeddings/www) folder for details.
 
 ## Databases
 
@@ -248,6 +302,8 @@ go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import 
 ### Build tags
 
 This package uses build tags to enable support for various features. The default set of tags are `duckdb,sqlite` but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
+
+_Note: The `duckdb` build tag is required for enough things that it may simply be removed (and DuckDB will always be a dependency). TBD._
 
 #### duckdb
 
@@ -582,17 +638,21 @@ go run -tags=duckdb,sqlite -mod vendor \
 
 Opening your web browser to `http://localhost:8082` you would see something like this (depending on the records you've indexed in the `embeddingsdb` databae):
 
-![](docs/images/embeddingsdb-list.png)
+![](docs/images/embeddingsdb-list-2.png)
 
-You can filter the list view by model and by provider (the source of embeddings). Individual record pages look like this:
+You can filter the list view by model and by provider (the source of embeddings). As you can see the list view needs some loving to collapse similar depictions with multiple models in a single view. Soon, I hope.
 
-![](docs/images/embeddingsdb-record.png)
+Individual record pages look like this:
 
-By default record pages will show similar records for a single model across all providers. Both of these facets may be updated.
+![](docs/images/embeddingsdb-record-2.png)
+
+By default record pages will show similar records for a single model across all providers. Both of these facets may be updated. The left hand panel (the record being viewed) will remain fixed but the right hand panel (containing similar records) will scroll.
 
 If enabled (with the `-enable-upload` flag) there is also an endpoint where you can upload an image of your choosing, generate embeddings on the fly for that image and then use those data to search for similar images in the `embeddingsdb` database. For example:
 
-![](docs/images/embeddingsdb-search.png)
+![](docs/images/embeddingsdb-upload-2.png)
+
+As with the record view, the left hand panel (the image that was uploaded) will remain fixed but the right hand panel (containing similar records) will scroll.
 
 #### Note and caveats
 

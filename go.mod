@@ -5,10 +5,9 @@ go 1.26.0
 require (
 	github.com/aaronland/go-flickr-api v1.1.8
 	github.com/aaronland/gocloud v1.1.0
-	github.com/parquet-go/parquet-go v0.29.0
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
-	github.com/sfomuseum/go-embeddings v0.2.0
-	github.com/sfomuseum/go-embeddingsdb v0.6.0
+	github.com/sfomuseum/go-embeddings v0.3.0
+	github.com/sfomuseum/go-embeddingsdb v0.7.0
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.18.0
 	github.com/whosonfirst/go-reader/v2 v2.1.0
@@ -19,10 +18,15 @@ require (
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/aaronland/go-aws/v3 v3.5.0 // indirect
 	github.com/aaronland/go-json-query v0.1.6 // indirect
+	github.com/aaronland/go-pagination v0.3.0 // indirect
+	github.com/aaronland/go-pagination-sql v0.2.0 // indirect
 	github.com/aaronland/go-roster v1.0.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
+	github.com/apache/arrow-go/v18 v18.5.1 // indirect
+	github.com/asg017/sqlite-vec-go-bindings v0.1.6 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.3 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.6 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.9 // indirect
@@ -46,21 +50,38 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.14 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.6 // indirect
 	github.com/aws/smithy-go v1.24.2 // indirect
+	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/duckdb/duckdb-go-bindings v0.10501.0 // indirect
+	github.com/duckdb/duckdb-go-bindings/lib/darwin-amd64 v0.10501.0 // indirect
+	github.com/duckdb/duckdb-go-bindings/lib/darwin-arm64 v0.10501.0 // indirect
+	github.com/duckdb/duckdb-go-bindings/lib/linux-amd64 v0.10501.0 // indirect
+	github.com/duckdb/duckdb-go-bindings/lib/linux-arm64 v0.10501.0 // indirect
+	github.com/duckdb/duckdb-go-bindings/lib/windows-amd64 v0.10501.0 // indirect
+	github.com/duckdb/duckdb-go/v2 v2.10501.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
+	github.com/goccy/go-json v0.10.5 // indirect
+	github.com/google/flatbuffers v25.12.19+incompatible // indirect
+	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.7.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/jtacoma/uritemplates v1.0.0 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
+	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
+	github.com/mattn/go-sqlite3 v1.14.37 // indirect
 	github.com/parquet-go/bitpack v1.0.0 // indirect
 	github.com/parquet-go/jsonlite v1.0.0 // indirect
+	github.com/parquet-go/parquet-go v0.29.0 // indirect
 	github.com/paulmach/orb v0.11.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.25 // indirect
+	github.com/sfomuseum/go-database v0.0.18 // indirect
 	github.com/sfomuseum/go-edtf v1.2.1 // indirect
 	github.com/sfomuseum/go-encoderfile v0.0.1 // indirect
 	github.com/sfomuseum/go-mobileclip v0.1.2 // indirect
@@ -70,6 +91,7 @@ require (
 	github.com/whosonfirst/go-ioutil v1.0.2 // indirect
 	github.com/whosonfirst/go-whosonfirst-flags v0.5.2 // indirect
 	github.com/whosonfirst/go-whosonfirst-sources v0.1.0 // indirect
+	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.mongodb.org/mongo-driver v1.11.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.40.0 // indirect
@@ -78,9 +100,15 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
 	gocloud.dev v0.45.0 // indirect
+	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
+	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/oauth2 v0.36.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260209163413-e7419c687ee4 // indirect
 	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/tools v0.42.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.256.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect

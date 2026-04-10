@@ -1,5 +1,9 @@
 package embeddingsdb
 
+import (
+	"github.com/sfomuseum/go-embeddingsdb/oembeddings"
+)
+
 type GetRecordRequest struct {
 	// Provider is the name (or context) of the provider responsible for DepictionId.
 	Provider string `json:"provider"`
@@ -69,4 +73,15 @@ type SimilarRecord struct {
 	Distance float32 `json:"similarity"`
 	// Attributes is an arbitrary map of key-value properties associated with the embeddings.
 	Attributes map[string]string `json:"attributes"`
+}
+
+// Derive an [oembeddings.OEmbeddings] instance from the attributes in 'r'.
+func (r *SimilarRecord) OEmbeddings() (*oembeddings.OEmbeddings, error) {
+	return oembeddings.FromAttributes(r.Attributes)
+}
+
+// Derive an [oembeddings.OEmbeddings] instance from the attributes in 'r'. Return nil if this is not possible.
+func (r *SimilarRecord) OEmbeddingsOrNil() *oembeddings.OEmbeddings {
+	oe, _ := oembeddings.FromAttributes(r.Attributes)
+	return oe
 }

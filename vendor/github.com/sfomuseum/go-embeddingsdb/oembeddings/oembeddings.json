@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/oembeddings.json",
+  "title": "OEmbeddings",
+  "description": "Represents an OEmbeddings object with a conditional URI requirement for preview.",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["image", "text"],
+      "minLength": 1
+    },
+    "preview": {
+      "type": "string",
+      "minLength": 1
+    },
+    "depiction_url": {
+      "type": "string",
+      "minLength": 1,
+      "format": "uri"
+    },
+    "subject_url": {
+      "type": "string",
+      "minLength": 1,
+      "format": "uri"
+    },
+    "subject_title": {
+      "type": "string",
+      "minLength": 0
+    },
+    "subject_creditline": {
+      "type": "string",
+      "minLength": 0
+    },
+    "provider_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider_url": {
+      "type": "string",
+      "minLength": 1,
+      "format": "uri"
+    }
+  },
+  "required": [
+    "type",
+    "preview",
+    "subject_url",
+    "subject_title",
+    "subject_creditline",
+    "provider_name",
+    "provider_url"
+  ],
+  "additionalProperties": true,
+  "if": {
+    "properties": { "type": { "const": "image" } },
+    "required": [ "type" ]
+  },
+  "then": {
+    "properties": {
+      "preview": { "format": "uri" }
+    },
+    "required": [ "preview" ]
+  }
+}

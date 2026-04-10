@@ -18,6 +18,12 @@ cli:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
 
+wasmjs:
+	GOOS=js GOARCH=wasm \
+		go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -tags wasmjs \
+		-o oembeddings/www/wasm/oembeddings_validate.wasm \
+		cmd/oembeddings-validate-wasm/main.go
+
 inspector:
 	go run -tags=$(TAGS) -mod $(GOMOD) \
 		cmd/inspector/main.go \
