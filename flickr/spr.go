@@ -175,6 +175,8 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 	}
 
 	// START OF Y U NO RETURN 'owner' in JSON SPR Flickr??!?
+	// This is technically not a Flickr API bug. See discussion here:
+	// https://github.com/sfomuseum/go-embeddings-harvest/issues/2
 	// Pleased but amazed that photo.gne?id= still works. For now...
 
 	subject_url := fmt.Sprintf("https://flickr.com/photo.gne?id=%s", id)
