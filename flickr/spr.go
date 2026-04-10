@@ -10,7 +10,8 @@ import (
 
 	"github.com/aaronland/go-flickr-api/client"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddings-harvest"
+	"github.com/sfomuseum/go-embeddingsdb/parquet"
+	"github.com/sfomuseum/go-embeddings-harvest"	
 	"github.com/tidwall/gjson"
 )
 
@@ -22,8 +23,8 @@ type EmbeddingsForFlickrSPROptions struct {
 	Models []string
 	// The [sfom_embeddings.Embedder[float32]] instance to derive embeddings with.
 	EmbeddingsClient sfom_embeddings.Embedder[float32]
-	// The [harvest.ParquetWriter] instance used to record data.
-	Writer *harvest.ParquetWriter
+	// The [parquet.ParquetWriter] instance used to record data.
+	Writer *parquet.ParquetWriter
 	//
 	Workers int
 }
@@ -205,6 +206,8 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 		if err != nil {
 			return fmt.Errorf("Failed to append records to parquet writer for %s, %w", ph_url, err)
 		}
+
+		opts.Writer.Flush()
 	}
 
 	return nil

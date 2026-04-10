@@ -12,10 +12,11 @@ import (
 	"sync"
 
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddings-harvest"
+	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 	"github.com/tidwall/gjson"
+	"github.com/sfomuseum/go-embeddings-harvest"		
 	"github.com/whosonfirst/go-reader/v2"
 	"github.com/whosonfirst/go-whosonfirst-feature/properties"
 	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
@@ -76,7 +77,7 @@ func main() {
 		log.Fatalf("Failed to create embeddings client, %v", err)
 	}
 
-	wr, err := harvest.NewWriter(ctx, output)
+	wr, err := parquet.NewWriter(ctx, output)
 
 	if err != nil {
 		log.Fatalf("Failed to create writers, %v", err)
@@ -263,6 +264,8 @@ func main() {
 
 			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 		})
+
+		wr.Flush()
 	}
 
 	wg.Wait()

@@ -13,7 +13,8 @@ import (
 
 	"github.com/sfomuseum/go-csvdict/v2"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddings-harvest"
+	"github.com/sfomuseum/go-embeddingsdb/parquet"
+	"github.com/sfomuseum/go-embeddings-harvest"		
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 )
@@ -73,7 +74,7 @@ func main() {
 		log.Fatalf("Failed to create embeddings client, %v", err)
 	}
 
-	wr, err := harvest.NewWriter(ctx, output)
+	wr, err := parquet.NewWriter(ctx, output)
 
 	if err != nil {
 		log.Fatalf("Failed to create new writer, %v", err)
@@ -235,6 +236,8 @@ func main() {
 
 			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 		})
+
+		wr.Flush()
 	}
 
 	wg.Wait()
