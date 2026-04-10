@@ -133,6 +133,10 @@ func main() {
 		}
 	}
 
+	if !args.Has("extras"){
+		args.Set("extras", strings.Join(extras, ","))
+	}
+	
 	if args.Has("userid") {
 
 		userid := args.Get("userid")

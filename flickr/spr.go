@@ -25,7 +25,7 @@ type EmbeddingsForFlickrSPROptions struct {
 	EmbeddingsClient sfom_embeddings.Embedder[float32]
 	// The [parquet.ParquetWriter] instance used to record data.
 	Writer *parquet.ParquetWriter
-	//
+	// The number of concurrent workers to use to fetch images and derive models.
 	Workers int
 }
 
@@ -153,7 +153,7 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 
 	title := ph_rsp.Get("title").String()
 
-	owner_name := ph_rsp.Get("owner_name").String()
+	owner_name := ph_rsp.Get("ownername").String()
 	owner_id := ph_rsp.Get("owner").String()
 
 	logger := slog.Default()
@@ -174,12 +174,23 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 		return fmt.Errorf("Failed to read photo %s, %w", ph_url, err)
 	}
 
+	// START OF Y U NO RETURN 'owner' in JSON SPR Flickr??!?
+	// Pleased but amazed that photo.gne?id= still works. For now...
+
+	subject_url := fmt.Sprintf("https://flickr.com/photo.gne?id=%s", id)
+
+	if owner_id != "" {
+		subject_url = fmt.Sprintf("https://flickr.com/photos/%s/%s", owner_id, id)
+	}
+
+	// END OF Y U NO RETURN 'owner' in JSON SPR Flickr??!?	
+	
 	attrs := map[string]string{
 		"type":               "image",
 		"preview":            ph_url,
-		"subject_url":        fmt.Sprintf("https://flickr.com/photos/%s/%s", owner_id, id),
+		"subject_url":        subject_url,
 		"subject_title":      title,
-		"subject_creditline": fmt.Sprintf(`Flickr member \"%s\"`, owner_name),
+		"subject_creditline": fmt.Sprintf(`Flickr member "%s"`, owner_name),
 		"provider_name":      "Flickr",
 		"provider_url":       "https://flickr.com",
 	}
