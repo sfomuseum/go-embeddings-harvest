@@ -14,8 +14,8 @@ import (
 	"github.com/aaronland/go-flickr-api/client"
 	"github.com/aaronland/gocloud/runtimevar"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
-	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-embeddings-harvest/flickr"
+	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 	"github.com/tidwall/gjson"
@@ -133,10 +133,10 @@ func main() {
 		}
 	}
 
-	if !args.Has("extras"){
+	if !args.Has("extras") {
 		args.Set("extras", strings.Join(extras, ","))
 	}
-	
+
 	if args.Has("userid") {
 
 		userid := args.Get("userid")

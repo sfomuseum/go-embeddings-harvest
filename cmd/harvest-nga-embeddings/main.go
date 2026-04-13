@@ -13,8 +13,9 @@ import (
 
 	"github.com/sfomuseum/go-csvdict/v2"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
+	"github.com/sfomuseum/go-embeddings-harvest"
+	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
-	"github.com/sfomuseum/go-embeddings-harvest"		
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 )
@@ -140,7 +141,10 @@ func main() {
 		throttle <- true
 	}
 
+	records_buffer := make([]*embeddingsdb.Record, 0)
+
 	wg := new(sync.WaitGroup)
+	mu := new(sync.RWMutex)
 
 	for row, err := range images_r.Iterate() {
 
@@ -228,10 +232,21 @@ func main() {
 				return
 			}
 
-			_, err = wr.Write(records)
+			mu.Lock()
+			defer mu.Unlock()
+			
+			records_buffer = append(records_buffer, records...)
 
-			if err != nil {
-				logger.Error("Failed to write records", "url", im_url, "error", err)
+			if len(records_buffer) >= 1000 {
+
+				_, err = wr.Write(records_buffer)
+
+				if err != nil {
+					logger.Error("Failed to write records buffer", "url", im_url, "error", err)
+					return
+				}
+
+				records_buffer = make([]*embeddingsdb.Record, 0)
 			}
 
 			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
@@ -241,6 +256,15 @@ func main() {
 	}
 
 	wg.Wait()
+
+	if len(records_buffer) > 0 {
+
+		_, err = wr.Write(records_buffer)
+
+		if err != nil {
+			slog.Error("Failed to write final records buffer", "error", err)
+		}
+	}
 
 	//
 

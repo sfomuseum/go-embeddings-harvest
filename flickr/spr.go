@@ -10,8 +10,8 @@ import (
 
 	"github.com/aaronland/go-flickr-api/client"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
+	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
-	"github.com/sfomuseum/go-embeddings-harvest"	
 	"github.com/tidwall/gjson"
 )
 
@@ -185,8 +185,8 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 		subject_url = fmt.Sprintf("https://flickr.com/photos/%s/%s", owner_id, id)
 	}
 
-	// END OF Y U NO RETURN 'owner' in JSON SPR Flickr??!?	
-	
+	// END OF Y U NO RETURN 'owner' in JSON SPR Flickr??!?
+
 	attrs := map[string]string{
 		"type":               "image",
 		"preview":            ph_url,

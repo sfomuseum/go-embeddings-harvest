@@ -13,10 +13,10 @@ import (
 	"sync"
 
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
+	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
-	"github.com/sfomuseum/go-embeddings-harvest"	
 	"github.com/tidwall/gjson"
 	"github.com/whosonfirst/go-whosonfirst-feature/properties"
 	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
