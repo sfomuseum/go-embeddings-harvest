@@ -1,6 +1,6 @@
 GOMOD=$(shell test -f "go.work" && echo "readonly" || echo "vendor")
 
-TAGS=duckdb,sqlite
+TAGS=sqlite
 
 vuln:
 	govulncheck -show verbose ./...

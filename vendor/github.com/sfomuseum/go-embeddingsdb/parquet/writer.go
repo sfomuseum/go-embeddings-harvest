@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -26,6 +27,9 @@ func NopWriteCloser(w io.Writer) io.WriteCloser {
 type ParquetWriter struct {
 	writer         io.WriteCloser
 	parquet_writer *parquet_go.GenericWriter[*embeddingsdb.Record]
+	batch_size     int
+	buffer         []*embeddingsdb.Record
+	mu             *sync.RWMutex
 }
 
 // NewWriter returns a new [ParquetWriter] instance configured using 'uri'. If 'uri' is "-"
@@ -57,9 +61,15 @@ func NewWriter(ctx context.Context, uri string) (*ParquetWriter, error) {
 
 	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
 
+	mu := new(sync.RWMutex)
+	buf := make([]*embeddingsdb.Record, 0)
+
 	pw := &ParquetWriter{
 		writer:         wr,
 		parquet_writer: p_wr,
+		batch_size:     10000,
+		buffer:         buf,
+		mu:             mu,
 	}
 
 	return pw, nil
@@ -67,7 +77,25 @@ func NewWriter(ctx context.Context, uri string) (*ParquetWriter, error) {
 
 // Write will dispatch 'rows' to the underlying Parquet `GenericWriter` instance.
 func (pw *ParquetWriter) Write(rows []*embeddingsdb.Record) (int, error) {
-	return pw.parquet_writer.Write(rows)
+
+	pw.mu.Lock()
+	defer pw.mu.Unlock()
+
+	pw.buffer = append(pw.buffer, rows...)
+
+	var n int
+	var err error
+
+	if len(pw.buffer) >= pw.batch_size {
+
+		n, err = pw.writeBuffer()
+
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return n, err
 }
 
 // Flush will invoke the  underlying Parquet `GenericWriter` instance's `Flush` method.
@@ -81,7 +109,7 @@ func (pw *ParquetWriter) Writer() io.WriteCloser {
 }
 
 // ParquetWriter returns the underlying	Parquet	`GenericWriter`	instance.
-func (pw *ParquetWriter) PqrquetWriter() *parquet_go.GenericWriter[*embeddingsdb.Record] {
+func (pw *ParquetWriter) ParquetWriter() *parquet_go.GenericWriter[*embeddingsdb.Record] {
 	return pw.parquet_writer
 }
 
@@ -89,9 +117,18 @@ func (pw *ParquetWriter) PqrquetWriter() *parquet_go.GenericWriter[*embeddingsdb
 // and [io.WriteCloser] instances.
 func (pw *ParquetWriter) Close() error {
 
+	pw.mu.Lock()
+	defer pw.mu.Unlock()
+
+	_, err := pw.writeBuffer()
+
+	if err != nil {
+		return err
+	}
+
 	pw.parquet_writer.Flush()
 
-	err := pw.parquet_writer.Close()
+	err = pw.parquet_writer.Close()
 
 	if err != nil {
 		return fmt.Errorf("Failed to close Parquet writer, %w", err)
@@ -104,4 +141,23 @@ func (pw *ParquetWriter) Close() error {
 	}
 
 	return nil
+}
+
+func (pw *ParquetWriter) writeBuffer() (int, error) {
+
+	var n int
+	var err error
+
+	if len(pw.buffer) > 0 {
+
+		n, err = pw.parquet_writer.Write(pw.buffer)
+
+		if err != nil {
+			return n, err
+		}
+
+		pw.buffer = make([]*embeddingsdb.Record, 0)
+	}
+
+	return n, nil
 }

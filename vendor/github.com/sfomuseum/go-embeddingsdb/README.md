@@ -299,19 +299,17 @@ go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-export 
 go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
 ```
 
-### Build tags
+### DuckDB
 
-This package uses build tags to enable support for various features. The default set of tags are `duckdb,sqlite` but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
+DuckDB is a dependency regardless of build tags (described below).
 
-_Note: The `duckdb` build tag is required for enough things that it may simply be removed (and DuckDB will always be a dependency). TBD._
-
-#### duckdb
-
-The `duckdb` tag adds support for the [DuckDB](https://duckdb.org/) database as an embeddings database.
-
-It also uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
+This package uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
 
 Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See below [for details](#statically-linked-extensions-macos).
+
+### Build tags
+
+Build tags are used to enable support for various features. The default set of tags are `sqlite` but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
 
 #### sqlite
 

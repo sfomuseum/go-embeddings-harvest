@@ -1,5 +1,3 @@
-//go:build duckdb
-
 package database
 
 // https://duckdb.org/2024/05/03/vector-similarity-search-vss.html
@@ -475,7 +473,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 	if err != nil {
 		logger.Error("Failed to query models", "q", q, "error", err)
-		return nil, fmt.Errorf("Failed to query models '%s', %w", err)
+		return nil, fmt.Errorf("Failed to query models, %w", err)
 	}
 
 	defer rows.Close()

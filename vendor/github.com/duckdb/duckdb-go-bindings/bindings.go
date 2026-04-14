@@ -62,6 +62,7 @@ const (
 	TypeStringLiteral  Type = C.DUCKDB_TYPE_STRING_LITERAL
 	TypeIntegerLiteral Type = C.DUCKDB_TYPE_INTEGER_LITERAL
 	TypeTimeNS         Type = C.DUCKDB_TYPE_TIME_NS
+	TypeGeometry       Type = C.DUCKDB_TYPE_GEOMETRY
 )
 
 // State wraps duckdb_state.
@@ -919,7 +920,7 @@ func GetOrCreateFromCache(cache InstanceCache, path string, outDb *Database, con
 	cPath := C.CString(path)
 	defer Free(unsafe.Pointer(cPath))
 	var err *C.char
-	defer Free(unsafe.Pointer(err))
+	defer func() { Free(unsafe.Pointer(err)) }()
 
 	var db C.duckdb_database
 	state := C.duckdb_get_or_create_from_cache(cache.data(), cPath, &db, config.data(), &err)
@@ -968,7 +969,7 @@ func OpenExt(path string, outDb *Database, config Config, errMsg *string) State 
 	cPath := C.CString(path)
 	defer Free(unsafe.Pointer(cPath))
 	var err *C.char
-	defer Free(unsafe.Pointer(err))
+	defer func() { Free(unsafe.Pointer(err)) }()
 
 	var db C.duckdb_database
 	state := C.duckdb_open_ext(cPath, &db, config.data(), &err)
@@ -1212,14 +1213,14 @@ func Query(conn Connection, query string, outRes *Result) State {
 
 // DestroyResult wraps duckdb_destroy_result.
 func DestroyResult(res *Result) {
-	if res == nil {
+	if res == nil || res.data.internal_data == nil {
 		return
 	}
 	if debugMode {
 		decrAllocCount("res")
 	}
 	C.duckdb_destroy_result(&res.data)
-	res = nil
+	res.data.internal_data = nil
 }
 
 func ColumnName(res *Result, col IdxT) string {
@@ -1347,6 +1348,18 @@ func StringTData(strT *StringT) string {
 	length := C.int(StringTLength(*strT))
 	ptr := unsafe.Pointer(C.duckdb_string_t_data(strT))
 	return string(C.GoBytes(ptr, length))
+}
+
+func ValidUtf8Check(blob []byte) ErrorData {
+	cBytes := (*C.char)(C.CBytes(blob))
+	defer Free(unsafe.Pointer(cBytes))
+	errorData := C.duckdb_valid_utf8_check(cBytes, IdxT(len(blob)))
+	if debugMode {
+		incrAllocCount("errorData")
+	}
+	return ErrorData{
+		Ptr: unsafe.Pointer(errorData),
+	}
 }
 
 // ------------------------------------------------------------------ //
@@ -2772,6 +2785,15 @@ func UnionTypeMemberType(logicalType LogicalType, index IdxT) LogicalType {
 	}
 }
 
+func GeometryTypeGetCRS(logicalType LogicalType) string {
+	crs := C.duckdb_geometry_type_get_crs(logicalType.data())
+	if crs == nil {
+		return ""
+	}
+	defer Free(unsafe.Pointer(crs))
+	return C.GoString(crs)
+}
+
 // DestroyLogicalType wraps duckdb_destroy_logical_type.
 func DestroyLogicalType(logicalType *LogicalType) {
 	if logicalType.Ptr == nil {
@@ -2909,6 +2931,12 @@ func VectorAssignStringElementLen(vec Vector, index IdxT, blob []byte) {
 	cBytes := (*C.char)(C.CBytes(blob))
 	defer Free(unsafe.Pointer(cBytes))
 	C.duckdb_vector_assign_string_element_len(vec.data(), index, cBytes, IdxT(len(blob)))
+}
+
+func UnsafeVectorAssignStringElementLen(vec Vector, index IdxT, blob []byte) {
+	cBytes := (*C.char)(C.CBytes(blob))
+	defer Free(unsafe.Pointer(cBytes))
+	C.duckdb_unsafe_vector_assign_string_element_len(vec.data(), index, cBytes, IdxT(len(blob)))
 }
 
 func ListVectorGetChild(vec Vector) Vector {
@@ -3302,7 +3330,7 @@ func TableFunctionGetClientContext(info BindInfo, outCtx *ClientContext) {
 	C.duckdb_table_function_get_client_context(info.data(), &ctx)
 	outCtx.Ptr = unsafe.Pointer(ctx)
 	if debugMode {
-		decrAllocCount("ctx")
+		incrAllocCount("ctx")
 	}
 }
 
@@ -3804,7 +3832,7 @@ func StreamFetchChunk(res Result, outChunk *DataChunk) State {
 
 func FetchChunk(res Result) DataChunk {
 	chunk := C.duckdb_fetch_chunk(res.data)
-	if debugMode {
+	if debugMode && chunk != nil {
 		incrAllocCount("chunk")
 	}
 	return DataChunk{
