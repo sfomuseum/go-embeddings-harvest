@@ -1,6 +1,8 @@
 package embeddingsdb
 
 import (
+	"fmt"
+
 	"github.com/sfomuseum/go-embeddingsdb/oembeddings"
 )
 
@@ -11,6 +13,10 @@ type GetRecordRequest struct {
 	Model string `json:"model"`
 	// DepictionId is the unique identifier for the depiction for which embeddings have been generated.
 	DepictionId string `json:"depiction_id"`
+}
+
+func (r *GetRecordRequest) Key() string {
+	return fmt.Sprintf("%s-%s-%s", r.Provider, r.DepictionId, r.Model)
 }
 
 type GetRecordResponse struct {
@@ -24,6 +30,10 @@ type RemoveRecordRequest struct {
 	Model string `json:"model"`
 	// DepictionId is the unique identifier for the depiction for which embeddings have been generated.
 	DepictionId string `json:"depiction_id"`
+}
+
+func (r *RemoveRecordRequest) Key() string {
+	return fmt.Sprintf("%s-%s-%s", r.Provider, r.DepictionId, r.Model)
 }
 
 type SimilarRecordsByIdRequest struct {

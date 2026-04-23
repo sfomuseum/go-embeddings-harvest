@@ -36,6 +36,8 @@ type Client interface {
 	Models(context.Context, ...string) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
 	Providers(context.Context) ([]string, error)
+	// Close performs and terminating functions required by the client.
+	Close(context.Context) error
 }
 
 var client_roster roster.Roster

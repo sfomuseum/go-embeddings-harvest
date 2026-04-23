@@ -60,14 +60,20 @@ func Import(ctx context.Context, cl client.Client, r io.ReaderAt) (int64, error)
 
 		for _, row := range rows {
 
-			err := cl.AddRecord(ctx, row)
+			select {
+			case <-ctx.Done():
+				logger.Debug("Context signaled done", "count", count)
+				return count, nil
+			default:
+				err := cl.AddRecord(ctx, row)
 
-			if err != nil {
-				return count, fmt.Errorf("Failed to add record '%s', %w", row.Key(), err)
+				if err != nil {
+					return count, fmt.Errorf("Failed to add record '%s', %w", row.Key(), err)
+				}
+
+				count += 1
+				logger.Debug("Add record", "key", row.Key(), "total", count)
 			}
-
-			count += 1
-			logger.Debug("Add record", "key", row.Key(), "total", count)
 		}
 	}
 

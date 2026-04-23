@@ -211,18 +211,18 @@ func (db *SQLiteDatabase) Export(ctx context.Context, uri string) error {
 }
 
 // Add adds a [embeddingsdb.Record] instance to the SQLite database.
-func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
+func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
 
 	id, err := db.uidForRecord(ctx, rec.Provider, rec.DepictionId, rec.Model)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	enc_e, err := sqlite_vec.SerializeFloat32(rec.Embeddings)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	var vec_q string
@@ -235,19 +235,19 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	case sqlite_vec_default_compression:
 		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
 	default:
-		return fmt.Errorf("Invalid or unsupported compression, '%s'", db.compression)
+		return false, fmt.Errorf("Invalid or unsupported compression, '%s'", db.compression)
 	}
 
 	_, err = db.vec_db.ExecContext(ctx, vec_q, id, enc_e)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	enc_attrs, err := json.Marshal(rec.Attributes)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	now := time.Now()
@@ -258,10 +258,18 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	_, err = db.vec_db.ExecContext(ctx, records_q, id, rec.Provider, rec.DepictionId, rec.SubjectId, rec.Model, string(enc_attrs), rec.Created, lastmod)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return err
+	return false, nil
+}
+
+func (db *SQLiteDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+	return 0, nil
+}
+
+func (db *SQLiteDatabase) AddBatchedRecord(ctx context.Context) error {
+	return nil
 }
 
 // Return the [embeddingsdb.Record] record matching 'provider', 'depiction_id' and 'model'.
@@ -310,6 +318,12 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 		return nil, err
 	}
 
+	conditions := make([]string, 0)
+
+	args := []any{
+		enc_e,
+	}
+
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 
 	var q string
@@ -317,25 +331,55 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	switch db.compression {
 	case sqlite_vec_quantize_compression:
 
-		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH vec_quantize_binary(?) AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name())
+		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v", db.records_table.Name(), db.vec_table.Name())
+
+		conditions = append(conditions, "v.embedding MATCH vec_quantize_binary(?) AND r.id = v.rowid")
 
 	case sqlite_vec_matroyshka_compression:
 
-		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH vec_normalize(vec_slice(?, 0, %d)) AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name(), matroyshka_dimensions)
+		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v", db.records_table.Name(), db.vec_table.Name())
+
+		conditions = append(conditions, fmt.Sprintf("v.embedding MATCH vec_normalize(vec_slice(?, 0, %d)) AND r.id = v.rowid", matroyshka_dimensions))
 
 	case sqlite_vec_default_compression:
 
-		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH ? AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name())
+		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v", db.records_table.Name(), db.vec_table.Name())
+
+		conditions = append(conditions, "v.embedding MATCH ? AND r.id = v.rowid")
 
 	default:
 		return nil, fmt.Errorf("Invalid or unsupported compression '%s'", db.compression)
 	}
 
-	q = fmt.Sprintf("%s AND v.distance > 0", q)
-	q = fmt.Sprintf("%s AND v.distance <= %f", q, max_distance)
-	q = fmt.Sprintf("%s AND k=%d", q, max_results)
+	conditions = append(conditions, "v.distance > 0")
+	conditions = append(conditions, fmt.Sprintf("v.distance <= %f", max_distance))
+	conditions = append(conditions, fmt.Sprintf("k=%d", max_results))
 
-	rows, err := db.vec_db.QueryContext(ctx, q, enc_e)
+	if req.SimilarProvider != nil {
+		conditions = append(conditions, "r.provider = ?")
+		args = append(args, *req.SimilarProvider)
+	}
+
+	count_exclude := len(req.Exclude)
+
+	if count_exclude > 0 {
+
+		placeholders := make([]string, count_exclude)
+
+		for i := 0; i < count_exclude; i++ {
+			args = append(args, req.Exclude[i])
+			placeholders[i] = "?"
+		}
+
+		conditions = append(conditions, fmt.Sprintf("r.depiction_id NOT IN (%s)", strings.Join(placeholders, ",")))
+	}
+
+	conditions = append(conditions, "r.model = ?")
+	args = append(args, req.Model)
+
+	q = fmt.Sprintf("%s WHERE %s", q, strings.Join(conditions, " AND "))
+
+	rows, err := db.vec_db.QueryContext(ctx, q, args...)
 
 	if err != nil {
 		return nil, err

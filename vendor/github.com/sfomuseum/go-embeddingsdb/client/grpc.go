@@ -327,3 +327,7 @@ func (e *GrpcClient) Providers(ctx context.Context) ([]string, error) {
 
 	return rsp.Provider, nil
 }
+
+func (cl *GrpcClient) Close(ctx context.Context) error {
+	return nil
+}

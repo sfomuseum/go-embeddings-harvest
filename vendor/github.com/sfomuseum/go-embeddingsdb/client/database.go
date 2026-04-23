@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/aaronland/go-pagination"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 )
@@ -56,7 +57,8 @@ func NewDatabaseClient(ctx context.Context, uri string) (Client, error) {
 }
 
 func (cl *DatabaseClient) AddRecord(ctx context.Context, record *embeddingsdb.Record) error {
-	return cl.db.AddRecord(ctx, record)
+	_, err := cl.db.AddRecord(ctx, record)
+	return err
 }
 
 func (cl *DatabaseClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
@@ -77,6 +79,22 @@ func (cl *DatabaseClient) Models(ctx context.Context, providers ...string) ([]st
 
 func (cl *DatabaseClient) Providers(ctx context.Context) ([]string, error) {
 	return cl.db.Providers(ctx)
+}
+
+func (cl *DatabaseClient) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	db_filters := make([]*database.ListRecordsFilter, len(filters))
+
+	for idx, f := range filters {
+		db_f := &database.ListRecordsFilter{
+			Column: f.Column,
+			Value:  f.Value,
+		}
+
+		db_filters[idx] = db_f
+	}
+
+	return cl.db.ListRecords(ctx, pg_opts, db_filters...)
 }
 
 func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error) {
@@ -105,4 +123,8 @@ func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, req *embedding
 	}
 
 	return cl.SimilarRecords(ctx, similar_req)
+}
+
+func (cl *DatabaseClient) Close(ctx context.Context) error {
+	return cl.db.Close(ctx)
 }

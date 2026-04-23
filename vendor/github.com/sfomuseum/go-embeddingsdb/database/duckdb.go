@@ -167,7 +167,7 @@ func (db *DuckDBDatabase) Export(ctx context.Context, uri string) error {
 	return err
 }
 
-func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
+func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
 
 	provider := rec.Provider
 	depiction_id := rec.DepictionId
@@ -181,13 +181,13 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	embeddings, err := json.Marshal(rec.Embeddings)
 
 	if err != nil {
-		return fmt.Errorf("Failed to marshal embeddings for ID %s, %w", depiction_id, err)
+		return false, fmt.Errorf("Failed to marshal embeddings for ID %s, %w", depiction_id, err)
 	}
 
 	attributes, err := json.Marshal(rec.Attributes)
 
 	if err != nil {
-		return fmt.Errorf("Failed to marshal attributes for ID %s, %w", depiction_id, err)
+		return false, fmt.Errorf("Failed to marshal attributes for ID %s, %w", depiction_id, err)
 	}
 
 	q := "INSERT OR REPLACE INTO embeddings (provider, depiction_id, subject_id, model, attributes, vec, created, lastmodified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
@@ -195,9 +195,17 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	_, err = db.vec_db.ExecContext(ctx, q, provider, depiction_id, subject_id, model, string(attributes), string(embeddings), created, lastmod)
 
 	if err != nil {
-		return fmt.Errorf("Failed to add embeddings for %s, %w", depiction_id, err)
+		return false, fmt.Errorf("Failed to add embeddings for %s, %w", depiction_id, err)
 	}
 
+	return false, nil
+}
+
+func (db *DuckDBDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+	return 0, nil
+}
+
+func (db *DuckDBDatabase) AddBatchedRecord(ctx context.Context) error {
 	return nil
 }
 

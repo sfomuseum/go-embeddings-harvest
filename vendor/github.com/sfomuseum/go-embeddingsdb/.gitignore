@@ -7,3 +7,4 @@ work
 .build
 *.db
 *.parquet
+go.work*

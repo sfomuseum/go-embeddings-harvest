@@ -33,7 +33,15 @@ func (db *NullDatabase) Export(ctx context.Context, uri string) error {
 	return nil
 }
 
-func (db *NullDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
+func (db *NullDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
+	return false, nil
+}
+
+func (db *NullDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+	return 0, nil
+}
+
+func (db *NullDatabase) AddBatchedRecord(ctx context.Context) error {
 	return nil
 }
 
