@@ -54,6 +54,7 @@ The easiest way to get started is to run the handy `cli` Makefile target to buil
 $> make cli
 go build -mod vendor -ldflags="-s -w" -o bin/harvest-flickr-embeddings cmd/harvest-flickr-embeddings/main.go
 go build -mod vendor -ldflags="-s -w" -o bin/harvest-nga-embeddings cmd/harvest-nga-embeddings/main.go
+go build -mod vendor -ldflags="-s -w" -o bin/harvest-moma-embeddings cmd/harvest-moma-embeddings/main.go
 go build -mod vendor -ldflags="-s -w" -o bin/harvest-sfomuseum-media-embeddings cmd/harvest-sfomuseum-media-embeddings/main.go
 go build -mod vendor -ldflags="-s -w" -o bin/harvest-sfomuseum-instagram-embeddings cmd/harvest-sfomuseum-instagram-embeddings/main.go
 ```
@@ -196,6 +197,42 @@ $> ./bin/harvest-nga-embeddings \
 #### See also
 
 * https://github.com/NationalGalleryOfArt/opendata
+
+### harvest-moma-embeddings
+
+Generate Parquet-encoded embeddings from the Museum of Modern Art (MoMA) open data release.
+
+```
+$> ./bin/harvest-moma-embeddings -h
+Generate Parquet-encoded embeddings from the Museum of Modern Art (MoMA) open data release.
+Usage:
+	./bin/harvest-moma-embeddings [options]Valid options are:
+  -artworks string
+    	The path to the 'Artworks.csv' file contained in the MuseumofModernArt/collection GitHub repository.
+  -embeddings-client-uri string
+    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
+  -model value
+    	One or more models to derive embeddings for. This may also be a comma-separated list.
+  -output string
+    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
+  -verbose
+    	Enable verbose (debug) logging.
+  -workers int
+    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
+``` 
+
+For example:
+
+```
+$> ./bin/harvest-moma-embeddings \
+	-output moma.parquet \
+	-published-images /usr/local/src/moma/collection/Artworks.csv \
+	-model s0,s1,s2
+```
+
+#### See also
+
+* https://github.com/MuseumofModernArt/collection/
 
 ### harvest-sfomuseum-instagram-embeddings
 

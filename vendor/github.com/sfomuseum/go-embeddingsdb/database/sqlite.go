@@ -304,11 +304,11 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	max_distance := db.max_distance
 	max_results := db.max_results
 
-	if req.MaxDistance != nil && *req.MaxDistance <= max_distance {
+	if req.MaxDistance != nil {
 		max_distance = *req.MaxDistance
 	}
 
-	if req.MaxResults != nil && *req.MaxResults <= max_results {
+	if req.MaxResults != nil {
 		max_results = *req.MaxResults
 	}
 

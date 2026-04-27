@@ -6,8 +6,8 @@ require (
 	github.com/aaronland/go-flickr-api v1.1.8
 	github.com/aaronland/gocloud v1.1.0
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
-	github.com/sfomuseum/go-embeddings v0.3.0
-	github.com/sfomuseum/go-embeddingsdb v0.8.0
+	github.com/sfomuseum/go-embeddings v0.4.1
+	github.com/sfomuseum/go-embeddingsdb v0.10.0
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.18.0
 	github.com/whosonfirst/go-reader/v2 v2.1.0
