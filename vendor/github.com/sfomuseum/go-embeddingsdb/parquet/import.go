@@ -3,80 +3,47 @@ package parquet
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
-	"time"
 
-	parquet_go "github.com/parquet-go/parquet-go"
-	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
-// Import [*embeddingsdb.Record] records stored in a Parquet file and add them to an embeddings database using 'cl'.
-func Import(ctx context.Context, cl client.Client, r io.ReaderAt) (int64, error) {
+// Import [*embeddingsdb.Record] records stored in one or more Parquet files identified by 'uris' and add them to an embeddings database using 'cl'.
+func Import(ctx context.Context, cl client.Client, uris ...string) (int64, error) {
 
 	logger := slog.Default()
-	parquet_r := parquet_go.NewGenericReader[*embeddingsdb.Record](r)
+	total := int64(0)
 
-	rows := make([]*embeddingsdb.Record, 0, 1000)
+	for _, uri := range uris {
 
-	ticker := time.NewTicker(60 * time.Second)
-	done_ch := make(chan bool)
+		logger := slog.Default()
+		logger = logger.With("uri", uri)
 
-	count := int64(0)
+		count := int64(0)
 
-	defer func() {
-		ticker.Stop()
-		done_ch <- true
-	}()
+		for rec, err := range Iterate(ctx, uri) {
 
-	go func() {
-
-		for {
-			select {
-			case <-done_ch:
-				logger.Debug("Records imported", "count", count)
-				return
-			case <-ticker.C:
-				logger.Debug("Records imported", "count", count)
-			}
-		}
-	}()
-
-	for {
-
-		n, err := parquet_r.Read(rows[:cap(rows)])
-
-		if err != nil {
-
-			if err == io.EOF {
-				break
+			if err != nil {
+				logger.Error("Iterator yielded an error", "error", err)
+				return total, err
 			}
 
-			return count, fmt.Errorf("Failed to read record, %w", err)
-		}
+			err := cl.AddRecord(ctx, rec)
 
-		rows = rows[:n]
-
-		for _, row := range rows {
-
-			select {
-			case <-ctx.Done():
-				logger.Debug("Context signaled done", "count", count)
-				return count, nil
-			default:
-				err := cl.AddRecord(ctx, row)
-
-				if err != nil {
-					return count, fmt.Errorf("Failed to add record '%s', %w", row.Key(), err)
-				}
-
-				count += 1
-				logger.Debug("Add record", "key", row.Key(), "total", count)
+			if err != nil {
+				logger.Error("Failed to add record", "key", rec.Key(), "error", err)
+				return total, fmt.Errorf("Failed to add record '%s', %w", rec.Key(), err)
 			}
+
+			count += 1
+			total += 1
+
+			logger.Debug("Add record", "key", rec.Key(), "count", count, "total", total)
 		}
+
+		logger.Debug("Finished iterating uri", "count", count, "total", total)
 	}
 
-	return count, nil
-
+	logger.Debug("Finished importing all", "total", total)
+	return total, nil
 }

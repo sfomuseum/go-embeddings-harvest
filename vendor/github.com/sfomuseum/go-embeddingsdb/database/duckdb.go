@@ -178,6 +178,12 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	now := time.Now()
 	lastmod := now.Unix()
 
+	dims := len(rec.Embeddings)
+
+	if dims != db.dimensions {
+		return false, fmt.Errorf("Embeddings have wrong dimension: %d (expected %d)", dims, db.dimensions)
+	}
+
 	embeddings, err := json.Marshal(rec.Embeddings)
 
 	if err != nil {
@@ -276,14 +282,18 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 	conditions = append(conditions, "distance > 0")
 
-	conditions = append(conditions, "distance <= ?")
-	args = append(args, max_distance)
+	if max_distance > 0 {
+		conditions = append(conditions, "distance <= ?")
+		args = append(args, max_distance)
+	}
 
 	str_conditions := strings.Join(conditions, " AND ")
 
 	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, attributes, array_distance(vec, ?::FLOAT[%d]) AS distance
 			  FROM embeddings WHERE %s ORDER BY distance ASC LIMIT %d`,
 		db.dimensions, str_conditions, max_results)
+
+	slog.Debug("Query similar", "query", q, "distance", max_distance)
 
 	rows, err := db.vec_db.QueryContext(ctx, q, args...)
 

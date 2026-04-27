@@ -266,6 +266,7 @@ func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.Simil
 		SimilarProvider: req.SimilarProvider,
 		MaxResults:      req.MaxResults,
 		MaxDistance:     req.MaxDistance,
+		Exclude:         req.Exclude,
 	}
 
 	rsp, err := e.client.SimilarRecords(ctx, grpc_req)
