@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"net/http"
+	_ "net/http"
 	"net/url"
 	"os"
 	"sync"
@@ -16,6 +16,8 @@ import (
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
+	"github.com/sfomuseum/go-blobcache"		
+	"github.com/sfomuseum/go-blobcache/http"	
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 )
@@ -23,7 +25,8 @@ import (
 func main() {
 
 	var embeddings_client_uri string
-
+	var cache_uri string
+	
 	var artworks string
 
 	var workers int
@@ -38,6 +41,8 @@ func main() {
 	fs.IntVar(&workers, "workers", 5, "The number of workers to use to fetch images (and derive embeddings) concurrently")
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
+	fs.StringVar(&cache_uri, "cache-uri", "null://", "...")
+	
 	fs.StringVar(&output, "output", "-", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
 	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "mobileclip://?client-uri=grpc://localhost:8080", "A registered sfomuseum/go-embeddingsdb/client.Client URI.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
@@ -68,6 +73,14 @@ func main() {
 		log.Fatalf("Failed to create embeddings client, %v", err)
 	}
 
+	blob_c, err := blobcache.NewBlobCache(ctx, cache_uri)
+
+	if err != nil {
+		log.Fatalf("Failed to create blob cache, %v", err)
+	}
+
+	defer blob_c.Close()
+	
 	wr, err := parquet.NewWriter(ctx, output)
 
 	if err != nil {
@@ -151,6 +164,17 @@ func main() {
 
 			logger.Debug("Fetch image", "url", im_url)
 
+			im_rsp, err := http.GetWithCache(ctx, blob_c, im_url)
+
+			if err != nil {
+				logger.Error("Failed to retrieve image", "url", im_url, "error", err)
+				return
+			}
+
+			im_body, err := io.ReadAll(im_rsp)
+			im_rsp.Close()
+
+			/*
 			im_rsp, err := http.Get(im_url)
 
 			if err != nil {
@@ -165,7 +189,8 @@ func main() {
 				logger.Error("Failed to read image", "url", im_url, "error", err)
 				return
 			}
-
+			*/
+			
 			attrs := map[string]string{
 				"type":               "image",
 				"preview":            im_url,

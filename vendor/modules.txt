@@ -490,6 +490,10 @@ github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
 github.com/pierrec/lz4/v4/internal/lz4stream
 github.com/pierrec/lz4/v4/internal/xxh32
+# github.com/sfomuseum/go-blobcache v0.0.0-20260427232332-5be3a70e528a
+## explicit; go 1.26.2
+github.com/sfomuseum/go-blobcache
+github.com/sfomuseum/go-blobcache/http
 # github.com/sfomuseum/go-csvdict/v2 v2.0.1
 ## explicit; go 1.23
 github.com/sfomuseum/go-csvdict/v2
