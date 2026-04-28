@@ -180,15 +180,19 @@ func main() {
 
 			logger.Debug("Fetch image", "url", im_url)
 
-			im_rsp, err := http.GetWithCache(ctx, blob_c, im_url)
+			im_r, err := http.GetWithCache(ctx, blob_c, im_url)
 
 			if err != nil {
 				logger.Error("Failed to retrieve image", "url", im_url, "error", err)
 				return
 			}
 
-			im_body, err := io.ReadAll(im_rsp)
-			im_rsp.Close()
+			if im_r == nil {
+				return
+			}
+
+			im_body, err := io.ReadAll(im_r)
+			im_r.Close()
 
 			if err != nil {
 				logger.Error("Failed to read image", "url", im_url, "error", err)

@@ -5,6 +5,7 @@ go 1.26.2
 require (
 	github.com/aaronland/go-flickr-api v1.1.8
 	github.com/aaronland/gocloud v1.1.0
+	github.com/gabriel-vasile/mimetype v1.4.13
 	github.com/sfomuseum/go-blobcache v0.0.0-20260427232332-5be3a70e528a
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
 	github.com/sfomuseum/go-embeddings v0.4.1

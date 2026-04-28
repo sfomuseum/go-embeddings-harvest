@@ -7,11 +7,14 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/aaronland/gocloud/blob/walk"
-	"github.com/aaronland/gocloud/blob/bucket"	
+	_ "gocloud.dev/blob/fileblob"
+
+	"github.com/aaronland/gocloud/blob/bucket"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/sfomuseum/go-blobcache"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
@@ -38,7 +41,7 @@ func main() {
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
 	fs.StringVar(&bucket_uri, "bucket-uri", "", "...")
-	
+
 	fs.StringVar(&cache_uri, "cache-uri", "null://", "A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached.")
 
 	fs.StringVar(&output, "output", "-", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
@@ -116,14 +119,17 @@ func main() {
 
 	wg := new(sync.WaitGroup)
 
-	for obj, err := range walk.WalkBucketWithIter(ctx, b, ".") {
+	li := b.List(nil)
+	iter, err_fn := li.All(ctx)
 
-		if err != nil {
-			log.Fatalf("Bucket iterator yielded an error, %v", err)
+	for obj, _ := range iter {
+
+		if obj.IsDir {
+			continue
 		}
 
 		// Check file format here...
-		
+
 		<-throttle
 
 		wg.Go(func() {
@@ -134,7 +140,7 @@ func main() {
 
 			logger := slog.Default()
 			logger = logger.With("key", obj.Key)
-			
+
 			count += 1
 
 			depiction_id := ""
@@ -146,7 +152,26 @@ func main() {
 				logger.Error("Failed to open object for reading", "error", err)
 				return
 			}
-			
+
+			mtype, err := mimetype.DetectReader(im_r)
+
+			if err != nil {
+				logger.Error("Failed to derive mime type", "error", err)
+				return
+			}
+
+			if !strings.HasPrefix(mtype.String(), "image") {
+				// logger.Debug("Not an image", "mtype", mtype.String())
+				return
+			}
+
+			_, err = im_r.Seek(0, 0)
+
+			if err != nil {
+				logger.Error("Failed to rewind reader", "error", err)
+				return
+			}
+
 			im_body, err := io.ReadAll(im_r)
 			im_r.Close()
 
@@ -154,7 +179,10 @@ func main() {
 				logger.Error("Failed to read object", "error", err)
 				return
 			}
-			
+
+			logger.Info("PROCESS ME")
+			return
+
 			attrs := map[string]string{
 				"type":               "image",
 				"preview":            "",
@@ -200,6 +228,12 @@ func main() {
 	}
 
 	wg.Wait()
+
+	err = err_fn()
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	err = wr.Close()
 
