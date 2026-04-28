@@ -13,6 +13,7 @@ import (
 
 	"github.com/aaronland/go-flickr-api/client"
 	"github.com/aaronland/gocloud/runtimevar"
+	"github.com/sfomuseum/go-blobcache"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest/flickr"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
@@ -25,6 +26,7 @@ func main() {
 
 	var flickr_client_uri string
 	var embeddings_client_uri string
+	var cache_uri string
 
 	var provider string
 	var spr_path string
@@ -38,6 +40,8 @@ func main() {
 	fs := flagset.NewFlagSet("flickr")
 	fs.StringVar(&flickr_client_uri, "flickr-client-uri", "", "A gocloud/runtimevar URI which dereferences in to a valid aaronland/go-flickr-api/client.Client URI.")
 	fs.Var(&params, "param", "Zero or more {KEY}={VALUE} parameters to query the Flickr API with.")
+
+	fs.StringVar(&cache_uri, "cache-uri", "null://", "A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached.")
 
 	fs.StringVar(&provider, "provider", "flickr", "The name of the provider to assign to each embeddings record.")
 	fs.StringVar(&spr_path, "spr-path", "", "The path to the list of photos in the Flickr API response. Paths should be described using tidwall/gjson \"dot\" notation.")
@@ -93,11 +97,20 @@ func main() {
 		log.Fatalf("Failed to create new writer, %v", err)
 	}
 
+	blob_c, err := blobcache.NewBlobCache(ctx, cache_uri)
+
+	if err != nil {
+		log.Fatalf("Failed to create blob cache, %v", err)
+	}
+
+	defer blob_c.Close()
+
 	emb_opts := &flickr.EmbeddingsForFlickrSPROptions{
 		EmbeddingsClient: emb_cl,
 		Writer:           wr,
 		Models:           models,
 		Provider:         provider,
+		BlobCache:        blob_c,
 	}
 
 	emb_cb := flickr.EmbeddingsForFlickrSPRPaginatedCallbackFunc(emb_opts, spr_path)
