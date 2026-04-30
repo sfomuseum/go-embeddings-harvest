@@ -10,6 +10,8 @@ import (
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-roster"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 type ListRecordsFilter struct {
@@ -23,19 +25,21 @@ type Client interface {
 	// Add a new record to an embeddings database.
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Retrieve a specific record from an embeddings database.
-	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	GetRecord(context.Context, *embeddingsdb.GetRecordRequest, ...options.Option) (*embeddingsdb.Record, error)
 	// Remove a record from an EmbeddingsDB instance.
-	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest, ...options.Option) error
 	// ListRecords returns a pagination list of records stored in the database.
-	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
+	ListRecords(context.Context, pagination.Options, ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error)
 	// Retrieve records with similar embeddings from an embeddings database.
-	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest, ...options.Option) ([]*embeddingsdb.SimilarRecord, error)
 	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
-	SimilarRecordsById(context.Context, *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error)
+	SimilarRecordsById(context.Context, *embeddingsdb.SimilarRecordsByIdRequest, ...options.Option) ([]*embeddingsdb.SimilarRecord, error)
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
-	Models(context.Context, ...string) ([]string, error)
+	Models(context.Context, ...options.Option) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)
+	Providers(context.Context, ...options.Option) ([]string, error)
+	// Return the pagination type used by the database implementation.
+	PaginationType(context.Context, ...options.Option) (database.PaginationType, error)
 	// Close performs and terminating functions required by the client.
 	Close(context.Context) error
 }

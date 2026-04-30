@@ -1,3 +1,5 @@
+//go:build !no_duckdb
+
 package database
 
 // https://duckdb.org/2024/05/03/vector-similarity-search-vss.html
@@ -24,7 +26,10 @@ import (
 	"github.com/aaronland/go-pagination"
 	pagination_sql "github.com/aaronland/go-pagination-sql"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
+
+const DuckDBDatabaseScheme string = "duckdb"
 
 type DuckDBDatabase struct {
 	Database
@@ -43,7 +48,7 @@ type DuckDBDatabase struct {
 func init() {
 
 	ctx := context.Background()
-	err := RegisterDatabase(ctx, "duckdb", NewDuckDBDatabase)
+	err := RegisterDatabase(ctx, DuckDBDatabaseScheme, NewDuckDBDatabase)
 
 	if err != nil {
 		panic(err)
@@ -157,7 +162,13 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 	return db, nil
 }
 
-func (db *DuckDBDatabase) Export(ctx context.Context, uri string) error {
+// Return the URI string used to instantiate the Database instance.
+func (db *DuckDBDatabase) URI() string {
+	return db.db_uri
+}
+
+// Export the contents of the database. This method will export the DuckDB database to 'uri'.
+func (db *DuckDBDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
 
 	// There does not appear to be any way to use query placeholders for this.
 	// Note: Export directory does not need to exist before calling EXPORT...
@@ -167,7 +178,8 @@ func (db *DuckDBDatabase) Export(ctx context.Context, uri string) error {
 	return err
 }
 
-func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
+// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
+func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record, opts ...options.Option) (bool, error) {
 
 	provider := rec.Provider
 	depiction_id := rec.DepictionId
@@ -207,15 +219,18 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return false, nil
 }
 
-func (db *DuckDBDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+// The number of batched records currently waiting to be added.
+func (db *DuckDBDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
 	return 0, nil
 }
 
-func (db *DuckDBDatabase) AddBatchedRecord(ctx context.Context) error {
+// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
+func (db *DuckDBDatabase) AddBatchedRecord(ctx context.Context, opts ...options.Option) error {
 	return nil
 }
 
-func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
+// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
+func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
 	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
 
@@ -223,7 +238,8 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return InflateDuckDBRecord(ctx, row)
 }
 
-func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+// Remove a record from an EmbeddingsDB instance.
+func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 
 	q := "DELETE FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
 
@@ -231,7 +247,8 @@ func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.Re
 	return err
 }
 
-func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+// Find similar records for a given model and record instance.
+func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 
@@ -241,15 +258,16 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 		return nil, fmt.Errorf("Failed to serialize query, %w", err)
 	}
 
-	max_results := db.max_results
-	max_distance := db.max_distance
+	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
+	max_results := GetMaxResultsFromOptions(ctx, opts...)
+	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
 
-	if req.MaxResults != nil {
-		max_results = *req.MaxResults
+	if max_results == nil {
+		*max_results = db.max_results
 	}
 
-	if req.MaxDistance != nil {
-		max_distance = *req.MaxDistance
+	if max_distance == nil {
+		*max_distance = db.max_distance
 	}
 
 	conditions := make([]string, 0)
@@ -258,9 +276,9 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 		string(embeddings),
 	}
 
-	if req.SimilarProvider != nil {
+	if similar_provider != nil {
 		conditions = append(conditions, "provider = ?")
-		args = append(args, &req.SimilarProvider)
+		args = append(args, *similar_provider)
 	}
 
 	count_exclude := len(req.Exclude)
@@ -282,7 +300,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 	conditions = append(conditions, "distance > 0")
 
-	if max_distance > 0 {
+	if *max_distance > 0 {
 		conditions = append(conditions, "distance <= ?")
 		args = append(args, max_distance)
 	}
@@ -337,7 +355,8 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	return results, nil
 }
 
-func (db *DuckDBDatabase) LastUpdate(ctx context.Context) (int64, error) {
+// Return the Unix timestamp of the last update to the Database instance.
+func (db *DuckDBDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	q := "SELECT lastmodified FROM embeddings ORDER BY lastmodified DESC LIMIT 1"
 
@@ -354,22 +373,21 @@ func (db *DuckDBDatabase) LastUpdate(ctx context.Context) (int64, error) {
 	return lastmod, nil
 }
 
-func (db *DuckDBDatabase) URI() string {
-	return db.db_uri
-}
+// ListRecords returns a paginated list of records stored in the database.
+func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
-func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+	filters := GetAllFiltersFromOptions(ctx, opts...)
+	args := make([]any, len(filters))
 
 	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings"
-	args := make([]any, len(filters))
 
 	if len(filters) > 0 {
 
 		where := make([]string, len(filters))
 
 		for i, f := range filters {
-			where[i] = fmt.Sprintf("%s = ?", f.Column)
-			args[i] = f.Value
+			where[i] = fmt.Sprintf("%s = ?", f.Key())
+			args[i] = f.Value()
 		}
 
 		q = fmt.Sprintf("%s WHERE %s", q, strings.Join(where, " AND "))
@@ -416,7 +434,8 @@ func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	return records, pg, nil
 }
 
-func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
+func (db *DuckDBDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
@@ -464,9 +483,12 @@ func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 
 }
 
-func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
+// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
+func (db *DuckDBDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	logger := slog.Default()
+
+	providers := GetAllProvidersFromOptions(ctx, opts...)
 	count_providers := len(providers)
 
 	q := "SELECT DISTINCT(model) AS model FROM embeddings WHERE model != ''"
@@ -525,7 +547,8 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 	return models, nil
 }
 
-func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
+// Return the unique list of providers across all the embeddings.
+func (db *DuckDBDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	q := "SELECT DISTINCT(provider) AS provider FROM embeddings WHERE provider != '' ORDER BY provider ASC"
 
@@ -566,6 +589,17 @@ func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 	return providers, nil
 }
 
+// Return the list of dimensions supported by this Database  implementation.
+func (db *DuckDBDatabase) Dimensions(ctx context.Context, opts ...options.Option) ([]int, error) {
+	return []int{db.dimensions}, nil
+}
+
+// Return the pagination type used by the database.
+func (db *DuckDBDatabase) PaginationType(ctx context.Context, opts ...options.Option) (PaginationType, error) {
+	return CountablePaginationType, nil
+}
+
+// Close performs and terminating functions required by the database.
 func (db *DuckDBDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
 }
