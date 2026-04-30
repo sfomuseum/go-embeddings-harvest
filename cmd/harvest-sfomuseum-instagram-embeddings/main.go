@@ -29,7 +29,7 @@ func main() {
 	var embeddings_client_uri string
 	var cache_uri string
 	var cache_check_lastmod bool
-	
+
 	var iterator_uri string
 	var iterator_source string
 
@@ -89,6 +89,15 @@ func main() {
 	}
 
 	defer blob_c.Close()
+
+	http_cl := harvest_http.NewClient()
+
+	cache_opts := &http.GetWithCacheOptions{
+		CheckLastModTime: cache_check_lastmod,
+		Client:           http_cl,
+		UserAgent:        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0",
+		BlobCache:        blob_c,
+	}
 
 	wr, err := parquet.NewWriter(ctx, output)
 
@@ -180,15 +189,6 @@ func main() {
 
 			im_url := fmt.Sprintf("https://static.sfomuseum.org/media/instagram/%s/%s_%s_n.jpg", media_id, media_id, ig_secret)
 			logger.Debug("Fetch image", "url", im_url)
-
-			http_cl := harvest_http.NewClient()
-
-			cache_opts := &http.GetWithCacheOptions{
-				CheckLastModTime: cache_check_lastmod,
-				Client:           http_cl,
-				UserAgent:        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0",
-				BlobCache:        blob_c,
-			}
 
 			im_rsp, err := http.GetWithCacheAndOptions(ctx, cache_opts, im_url)
 

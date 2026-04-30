@@ -90,6 +90,15 @@ func main() {
 
 	defer blob_c.Close()
 
+	http_cl := harvest_http.NewClient()
+
+	cache_opts := &http.GetWithCacheOptions{
+		CheckLastModTime: cache_check_lastmod,
+		Client:           http_cl,
+		UserAgent:        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0",
+		BlobCache:        blob_c,
+	}
+
 	wr, err := parquet.NewWriter(ctx, output)
 
 	if err != nil {
@@ -182,15 +191,6 @@ func main() {
 			im_url := row["iiifthumburl"]
 
 			logger.Debug("Fetch image", "url", im_url)
-
-			http_cl := harvest_http.NewClient()
-
-			cache_opts := &http.GetWithCacheOptions{
-				CheckLastModTime: cache_check_lastmod,
-				Client:           http_cl,
-				UserAgent:        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0",
-				BlobCache: blob_c,
-			}
 
 			im_r, err := http.GetWithCacheAndOptions(ctx, cache_opts, im_url)
 
