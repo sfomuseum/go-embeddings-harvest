@@ -1,7 +1,5 @@
 package database
 
-// This is all up for debate. Just testing things right now.
-
 import (
 	"context"
 	"fmt"
@@ -13,42 +11,41 @@ import (
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-roster"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
-
-type ListRecordsFilter struct {
-	Column string
-	Value  any
-	// Operator
-}
 
 // Database defines an interface for adding and querying vector embeddings of [embeddingsdb.Record] records.
 type Database interface {
-	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
-	AddRecord(context.Context, *embeddingsdb.Record) (bool, error)
-	// The number of batched records currently waiting to be added.
-	BatchedRecordsCount(context.Context) (int, error)
-	// Add the pending batched records
-	AddBatchedRecords(context.Context) error
-	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
-	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
-	// Remove a record from an EmbeddingsDB instance.
-	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
-	// ListRecords returns a pagination list of records stored in the database.
-	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
-	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
-	IterateRecords(context.Context) iter.Seq2[*embeddingsdb.Record, error]
-	// Find similar records for a given model and record instance.
-	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
-	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
-	Export(context.Context, string) error
-	// Return the Unix timestamp of the last update to the Database instance.
-	LastUpdate(context.Context) (int64, error)
 	// Return the URI string used to instantiate the Database instance.
 	URI() string
+	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
+	AddRecord(context.Context, *embeddingsdb.Record, ...options.Option) (bool, error)
+	// The number of batched records currently waiting to be added.
+	BatchedRecordsCount(context.Context, ...options.Option) (int, error)
+	// Add the pending batched records.
+	AddBatchedRecords(context.Context, ...options.Option) error
+	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
+	GetRecord(context.Context, *embeddingsdb.GetRecordRequest, ...options.Option) (*embeddingsdb.Record, error)
+	// Remove a record from an EmbeddingsDB instance.
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest, ...options.Option) error
+	// ListRecords returns a paginated list of records stored in the database.
+	ListRecords(context.Context, pagination.Options, ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error)
+	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
+	IterateRecords(context.Context, ...options.Option) iter.Seq2[*embeddingsdb.Record, error]
+	// Find similar records for a given model and record instance.
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest, ...options.Option) ([]*embeddingsdb.SimilarRecord, error)
+	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
+	Export(context.Context, string, ...options.Option) error
+	// Return the Unix timestamp of the last update to the Database instance.
+	LastUpdate(context.Context, ...options.Option) (int64, error)
+	// Return the list of dimensions supported by this Database  implementation.
+	Dimensions(context.Context, ...options.Option) ([]int, error)
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
-	Models(context.Context, ...string) ([]string, error)
+	Models(context.Context, ...options.Option) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)
+	Providers(context.Context, ...options.Option) ([]string, error)
+	// Return the pagination type used by the database implementation.
+	PaginationType(context.Context, ...options.Option) (PaginationType, error)
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error
 }

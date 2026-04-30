@@ -11,6 +11,8 @@ service EmbeddingsDBService {
     rpc SimilarRecordsById(SimilarRecordsByIdRequest) returns (SimilarRecordsResponse) {}
     rpc GetModels(GetModelsRequest) returns (GetModelsResponse) {}
     rpc GetProviders(GetProvidersRequest) returns (GetProvidersResponse) {}
+    rpc GetDimensions(GetDimensionsRequest) returns (GetDimensionsResponse) {}
+    rpc GetPaginationType(GetPaginationTypeRequest) returns (GetPaginationTypeResponse) {}    
     rpc ListRecords(ListRecordsRequest) returns (ListRecordsResponse) {}
 }
 
@@ -92,6 +94,20 @@ message GetProvidersRequest {
 
 message GetProvidersResponse {
     repeated string provider = 1;
+}
+
+message GetDimensionsRequest {
+}
+
+message GetDimensionsResponse {
+    repeated int32 dimensions = 1;
+}
+
+message GetPaginationTypeRequest {
+}
+
+message GetPaginationTypeResponse {
+    string pagination_type = 1;
 }
 
 message PaginationOptions {

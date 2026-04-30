@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
+	net_http "net/http"
 	"sync"
 
 	"github.com/aaronland/go-flickr-api/client"
+	"github.com/sfomuseum/go-blobcache"
+	"github.com/sfomuseum/go-blobcache/http"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
@@ -25,6 +27,10 @@ type EmbeddingsForFlickrSPROptions struct {
 	EmbeddingsClient sfom_embeddings.Embedder[float32]
 	// The [parquet.ParquetWriter] instance used to record data.
 	Writer *parquet.ParquetWriter
+	// A [*blobcache.BlobCache] instance used to cache images.
+	BlobCache                 *blobcache.BlobCache
+	BlobCacheCheckLastModTime bool
+	BlobCacheHTTPClient       *net_http.Client
 	// The number of concurrent workers to use to fetch images and derive models.
 	Workers int
 }
@@ -161,14 +167,20 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 
 	ph_url := fmt.Sprintf("https://live.staticflickr.com/%s/%s_%s.jpg", server, id, secret)
 
-	im_rsp, err := http.Get(ph_url)
+	cache_opts := &http.GetWithCacheOptions{
+		CheckLastModTime: opts.BlobCacheCheckLastModTime,
+		Client:           opts.BlobCacheHTTPClient,
+		BlobCache:        opts.BlobCache,
+	}
+
+	im_rsp, err := http.GetWithCacheAndOptions(ctx, cache_opts, ph_url)
 
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve photo %s, %w", ph_url, err)
 	}
 
-	im_body, err := io.ReadAll(im_rsp.Body)
-	im_rsp.Body.Close()
+	im_body, err := io.ReadAll(im_rsp)
+	im_rsp.Close()
 
 	if err != nil {
 		return fmt.Errorf("Failed to read photo %s, %w", ph_url, err)
