@@ -752,7 +752,7 @@ github.com/planetscale/vtprotobuf/types/known/emptypb
 github.com/planetscale/vtprotobuf/types/known/structpb
 github.com/planetscale/vtprotobuf/types/known/timestamppb
 github.com/planetscale/vtprotobuf/types/known/wrapperspb
-# github.com/sfomuseum/go-blobcache v1.0.0
+# github.com/sfomuseum/go-blobcache v1.1.0
 ## explicit; go 1.26.2
 github.com/sfomuseum/go-blobcache
 github.com/sfomuseum/go-blobcache/http

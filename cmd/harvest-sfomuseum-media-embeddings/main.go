@@ -14,7 +14,6 @@ import (
 	"github.com/sfomuseum/go-blobcache/http"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
-	harvest_http "github.com/sfomuseum/go-embeddings-harvest/http"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
@@ -94,12 +93,11 @@ func main() {
 
 	defer blob_c.Close()
 
-	http_cl := harvest_http.NewClient()
+	http_cl := http.NewClient()
 
 	cache_opts := &http.GetWithCacheOptions{
 		CheckLastModTime: cache_check_lastmod,
 		Client:           http_cl,
-		UserAgent:        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0",
 		BlobCache:        blob_c,
 	}
 

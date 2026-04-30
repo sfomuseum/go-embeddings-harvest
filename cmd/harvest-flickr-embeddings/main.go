@@ -14,9 +14,9 @@ import (
 	"github.com/aaronland/go-flickr-api/client"
 	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-blobcache"
+	"github.com/sfomuseum/go-blobcache/http"	
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest/flickr"
-	harvest_http "github.com/sfomuseum/go-embeddings-harvest/http"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
@@ -108,7 +108,7 @@ func main() {
 
 	defer blob_c.Close()
 
-	http_cl := harvest_http.NewClient()
+	http_cl := http.NewClient()
 
 	emb_opts := &flickr.EmbeddingsForFlickrSPROptions{
 		EmbeddingsClient:          emb_cl,

@@ -310,8 +310,8 @@ github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10/go.mod h1
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/sfomuseum/go-blobcache v1.0.0 h1:iHcNTKrKy136DGnk9Pst2vIVWwefwyydwYIVzTGJyNQ=
-github.com/sfomuseum/go-blobcache v1.0.0/go.mod h1:4PhZ6qIep1HvUXIu68CnZM7xTIvm7zLo25uPUVVCbrk=
+github.com/sfomuseum/go-blobcache v1.1.0 h1:ItySoernp1mYZm9DfMkOaCGqDG5ORi+S4DdYC+qykDU=
+github.com/sfomuseum/go-blobcache v1.1.0/go.mod h1:4PhZ6qIep1HvUXIu68CnZM7xTIvm7zLo25uPUVVCbrk=
 github.com/sfomuseum/go-csvdict/v2 v2.0.1 h1:jeiidDN5722R7MBvUk5zn6oywKWTPXv2JKuRwP46CHA=
 github.com/sfomuseum/go-csvdict/v2 v2.0.1/go.mod h1:ZZR7Ez7cDu/jOilHhFc1GFOs1scCuV5kUqRINkHV60I=
 github.com/sfomuseum/go-database v0.0.18 h1:C4JyfixyWUC1pPJdJp1yzMRr58LgrGYClQJw2QXko9g=

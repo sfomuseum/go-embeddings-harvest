@@ -7,8 +7,8 @@ import (
 
 func NewClient() *net_http.Client {
 
-	limit := 10 * time.Second
-	requests := 60
+	limit := 1 * time.Second
+	requests := 100
 	return NewClientWithLimits(limit, requests)
 }
 
