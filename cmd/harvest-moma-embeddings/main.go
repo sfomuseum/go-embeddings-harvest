@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	_ "net/http"
 	"net/url"
 	"os"
 	"sync"
@@ -17,6 +16,7 @@ import (
 	"github.com/sfomuseum/go-csvdict/v2"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
+	harvest_http "github.com/sfomuseum/go-embeddings-harvest/http"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
@@ -166,11 +166,16 @@ func main() {
 
 			logger.Debug("Fetch image", "url", im_url)
 
+			http_cl := harvest_http.NewClient()
+
 			cache_opts := &http.GetWithCacheOptions{
 				CheckLastModTime: cache_check_lastmod,
+				Client:           http_cl,
+				UserAgent:        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0",
+				BlobCache:        blob_c,
 			}
 
-			im_rsp, err := http.GetWithCacheAndOptions(ctx, blob_c, im_url, cache_opts)
+			im_rsp, err := http.GetWithCacheAndOptions(ctx, cache_opts, im_url)
 
 			if err != nil {
 				logger.Error("Failed to retrieve image", "url", im_url, "error", err)

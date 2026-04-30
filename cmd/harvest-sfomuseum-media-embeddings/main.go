@@ -14,6 +14,7 @@ import (
 	"github.com/sfomuseum/go-blobcache/http"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
+	harvest_http "github.com/sfomuseum/go-embeddings-harvest/http"	
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
@@ -27,6 +28,8 @@ func main() {
 
 	var embeddings_client_uri string
 	var cache_uri string
+	var cache_check_lastmod bool
+	
 	var iterator_uri string
 	var iterator_source string
 
@@ -47,7 +50,8 @@ func main() {
 	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "mobileclip://?client-uri=grpc://localhost:8080", "A registered sfomuseum/go-embeddingsdb/client.Client URI.")
 
 	fs.StringVar(&cache_uri, "cache-uri", "null://", "A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached.")
-
+	fs.BoolVar(&cache_check_lastmod, "cache-check-lastmod", true, "A boolean value to indicate whether the last modified date of an object to harvest should be compared against the local cache.")
+	
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
 
 	fs.Usage = func() {
@@ -181,7 +185,16 @@ func main() {
 
 			logger.Debug("Fetch image", "url", im_url)
 
-			im_rsp, err := http.GetWithCache(ctx, blob_c, im_url)
+			http_cl := harvest_http.NewClient()
+
+			cache_opts := &http.GetWithCacheOptions{
+				CheckLastModTime: cache_check_lastmod,
+				Client:           http_cl,
+				UserAgent:        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0",
+				BlobCache:        blob_c,
+			}
+
+			im_rsp, err := http.GetWithCacheAndOptions(ctx, cache_opts, im_url)
 
 			if err != nil {
 				logger.Error("Failed to retrieve image", "url", im_url, "error", err)

@@ -312,8 +312,8 @@ github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10/go.mod h1
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/sfomuseum/go-blobcache v0.0.0-20260430164221-61925f6bb6b2 h1:BBjJPkRbcz7ZtnhawebYlM9/7h4uvXEMWkP6RogTwrQ=
-github.com/sfomuseum/go-blobcache v0.0.0-20260430164221-61925f6bb6b2/go.mod h1:mWA/yl1tg8WxGehpmDm5XhE1xA6wNVI1UFrxJRZpzEk=
+github.com/sfomuseum/go-blobcache v0.0.0-20260430193132-6d6e9acc8440 h1:31o9NI+z3u8rhWEto3vRASEN9KyQsRO5n6EOSprBygc=
+github.com/sfomuseum/go-blobcache v0.0.0-20260430193132-6d6e9acc8440/go.mod h1:Op5VobYKMsjyiWQ9qXXZR0hUjTHapo0XugQ0SAn9dQ0=
 github.com/sfomuseum/go-csvdict/v2 v2.0.1 h1:jeiidDN5722R7MBvUk5zn6oywKWTPXv2JKuRwP46CHA=
 github.com/sfomuseum/go-csvdict/v2 v2.0.1/go.mod h1:ZZR7Ez7cDu/jOilHhFc1GFOs1scCuV5kUqRINkHV60I=
 github.com/sfomuseum/go-database v0.0.18 h1:C4JyfixyWUC1pPJdJp1yzMRr58LgrGYClQJw2QXko9g=
@@ -330,6 +330,8 @@ github.com/sfomuseum/go-flags v0.12.1 h1:xvg3iEz510JPr9ItPxOOF2C12JnlplodT1V/1Ty
 github.com/sfomuseum/go-flags v0.12.1/go.mod h1:cUTByyudaM9d+iHwxsEpyYHemWVOGL/bqTRPIvydiC8=
 github.com/sfomuseum/go-mobileclip v0.1.2 h1:e3a8wwYj6Z9fQq60LmT8F+K2u5oDykXHjFrUfUGPvUE=
 github.com/sfomuseum/go-mobileclip v0.1.2/go.mod h1:8DLg9esYfDrhUCjPxGFjQIO/2VoK2pgrbJ2/SlxbLFg=
+github.com/sfomuseum/iso8601duration v1.1.0 h1:kMYzbamrZp9dRxi5iFuhjl5CzHXK6s6Bzz/c75wsq8Q=
+github.com/sfomuseum/iso8601duration v1.1.0/go.mod h1:6EenGWM7y8uVquMPEZwoR+ihpIMJluw7iYiHhDTuOAk=
 github.com/spiffe/go-spiffe/v2 v2.6.0 h1:l+DolpxNWYgruGQVV0xsfeya3CsC7m8iBzDnMpsbLuo=
 github.com/spiffe/go-spiffe/v2 v2.6.0/go.mod h1:gm2SeUoMZEtpnzPNs2Csc0D/gX33k1xIx7lEzqblHEs=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

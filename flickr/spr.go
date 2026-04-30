@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	net_http "net/http"
 	"sync"
 
 	"github.com/aaronland/go-flickr-api/client"
@@ -27,7 +28,9 @@ type EmbeddingsForFlickrSPROptions struct {
 	// The [parquet.ParquetWriter] instance used to record data.
 	Writer *parquet.ParquetWriter
 	// A [*blobcache.BlobCache] instance used to cache images.
-	BlobCache *blobcache.BlobCache
+	BlobCache                 *blobcache.BlobCache
+	BlobCacheCheckLastModTime bool
+	BlobCacheHTTPClient       *net_http.Client
 	// The number of concurrent workers to use to fetch images and derive models.
 	Workers int
 }
@@ -164,7 +167,13 @@ func EmbeddingsForFlickrSPR(ctx context.Context, opts *EmbeddingsForFlickrSPROpt
 
 	ph_url := fmt.Sprintf("https://live.staticflickr.com/%s/%s_%s.jpg", server, id, secret)
 
-	im_rsp, err := http.GetWithCache(ctx, opts.BlobCache, ph_url)
+	cache_opts := &http.GetWithCacheOptions{
+		CheckLastModTime: opts.BlobCacheCheckLastModTime,
+		Client:           opts.BlobCacheHTTPClient,
+		BlobCache:        opts.BlobCache,
+	}
+
+	im_rsp, err := http.GetWithCacheAndOptions(ctx, cache_opts, ph_url)
 
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve photo %s, %w", ph_url, err)

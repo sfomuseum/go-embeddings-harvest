@@ -2,7 +2,6 @@ package blobcache
 
 import (
 	"context"
-	"crypto/md5"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -11,11 +10,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync/atomic"
 	"time"
 
 	"github.com/aaronland/gocloud/blob/bucket"
+	"github.com/dustin/go-humanize"
+	"github.com/sfomuseum/iso8601duration"
 	"gocloud.dev/blob"
 )
 
@@ -37,23 +37,24 @@ const (
 // configuration limits.  The cache also keeps a SQLite database that
 // stores the size and last‑access time of each cached item.
 type BlobCache struct {
-	bucket   *blob.Bucket
-	ticker   *time.Ticker
-	done_ch  chan bool
-	max_age  int64
-	max_size int64
-	index_db *sql.DB
-	indexing *atomic.Bool
-	indexed  *atomic.Bool
-	pruning  *atomic.Bool
+	bucket      *blob.Bucket
+	bucket_hash string
+	ticker      *time.Ticker
+	done_ch     chan bool
+	max_age     uint64
+	max_size    uint64
+	index_db    *sql.DB
+	indexing    *atomic.Bool
+	indexed     *atomic.Bool
+	pruning     *atomic.Bool
 }
 
 // NewBlobCache creates a new BlobCache.  The URI passed in defines the
 // underlying bucket (for example, `file:///tmp/cache`).
 // Query parameters may be supplied to override the defaults:
 //
-//   - `max-age` – maximum age of cached items in seconds (default 7 days)
-//   - `max-size` – maximum total cache size in bytes (default 10 GiB)
+//   - `max-age` – maximum age of cached items expressed as an ISO8601 duration string (default "P1W" (7 days))
+//   - `max-size` – maximum total cache size expressed as a string (default "10GB")
 //   - `index-dsn` – SQLite DSN for the cache index. The default is to create a database
 //     file in the user's cache directory under `blobcache/blobcache.db`.
 func NewBlobCache(ctx context.Context, uri string) (*BlobCache, error) {
@@ -66,38 +67,19 @@ func NewBlobCache(ctx context.Context, uri string) (*BlobCache, error) {
 
 	q := u.Query()
 
-	d, err := time.ParseDuration(fmt.Sprintf("%dh", 7*24))
-
-	if err != nil {
-		return nil, err
-	}
-
 	index_dsn := ":default:"
-	max_age := int64(d.Seconds())
-	max_size := int64(10 * Gigabyte)
+
+	str_max_age := "P1W"
+	str_max_size := "10GB"
 
 	if q.Has("max-age") {
 
-		v, err := strconv.ParseInt(q.Get("max-age"), 10, 64)
-
-		if err != nil {
-			return nil, fmt.Errorf("Failed to parse ?max-age= parameter, %w", err)
-		}
-
-		max_age = v
+		str_max_age = q.Get("max-age")
 		q.Del("max-age")
 	}
 
 	if q.Has("max-size") {
-
-		v, err := strconv.ParseInt(q.Get("max-size"), 10, 64)
-
-		if err != nil {
-			return nil, fmt.Errorf("Failed to parse ?max-size= parameter, %w", err)
-		}
-
-		max_size = v
-
+		str_max_size = q.Get("max-size")
 		q.Del("max-size")
 	}
 
@@ -106,11 +88,30 @@ func NewBlobCache(ctx context.Context, uri string) (*BlobCache, error) {
 		q.Del("index-dsn")
 	}
 
+	// Convert max-age to seconds
+
+	d, err := duration.FromString(str_max_age)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse maximum cache object age value, %w", err)
+	}
+
+	max_age := uint64(d.ToDuration().Seconds())
+
+	// Convert max-size to bytes
+
+	max_size, err := humanize.ParseBytes(str_max_size)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse maximum cache size value, %w", err)
+	}
+
 	u.RawQuery = q.Encode()
 	uri = u.String()
 
 	var b *blob.Bucket
 	var index_db *sql.DB
+	var bucket_hash string
 
 	switch u.Scheme {
 	case "null":
@@ -133,6 +134,8 @@ func NewBlobCache(ctx context.Context, uri string) (*BlobCache, error) {
 			return nil, fmt.Errorf("Failed to open cache bucket, %w", err)
 		}
 
+		bucket_hash = hashKey(uri)
+
 		slog.Debug("Set up index database", "dsn", index_dsn)
 
 		index_db, err = setupBlobCacheIndex(ctx, index_dsn)
@@ -152,13 +155,14 @@ func NewBlobCache(ctx context.Context, uri string) (*BlobCache, error) {
 	pruning.Store(false)
 
 	c := &BlobCache{
-		bucket:   b,
-		index_db: index_db,
-		max_age:  max_age,
-		max_size: max_size,
-		indexing: indexing,
-		indexed:  indexed,
-		pruning:  pruning,
+		bucket:      b,
+		bucket_hash: bucket_hash,
+		index_db:    index_db,
+		max_age:     max_age,
+		max_size:    max_size,
+		indexing:    indexing,
+		indexed:     indexed,
+		pruning:     pruning,
 	}
 
 	if b != nil {
@@ -358,7 +362,7 @@ func (c *BlobCache) derivePathFromKey(key string) string {
 // segments and joined with the OS path separator.
 func (c *BlobCache) deriveTreeFromKey(key string) string {
 
-	input := c.hashKey(key)
+	input := hashKey(key)
 	parts := []string{}
 
 	for len(input) > 6 {
@@ -374,11 +378,4 @@ func (c *BlobCache) deriveTreeFromKey(key string) string {
 
 	path := filepath.Join(parts...)
 	return path
-}
-
-// hashKey returns the MD5 digest of the supplied key as a hex string.
-func (c *BlobCache) hashKey(key string) string {
-
-	data := []byte(key)
-	return fmt.Sprintf("%x", md5.Sum(data))
 }

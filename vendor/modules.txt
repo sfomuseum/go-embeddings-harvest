@@ -761,7 +761,7 @@ github.com/planetscale/vtprotobuf/types/known/emptypb
 github.com/planetscale/vtprotobuf/types/known/structpb
 github.com/planetscale/vtprotobuf/types/known/timestamppb
 github.com/planetscale/vtprotobuf/types/known/wrapperspb
-# github.com/sfomuseum/go-blobcache v0.0.0-20260430164221-61925f6bb6b2
+# github.com/sfomuseum/go-blobcache v0.0.0-20260430193132-6d6e9acc8440
 ## explicit; go 1.26.2
 github.com/sfomuseum/go-blobcache
 github.com/sfomuseum/go-blobcache/http
@@ -799,6 +799,9 @@ github.com/sfomuseum/go-flags/multi
 ## explicit; go 1.25.0
 github.com/sfomuseum/go-mobileclip
 github.com/sfomuseum/go-mobileclip/grpc
+# github.com/sfomuseum/iso8601duration v1.1.0
+## explicit; go 1.18
+github.com/sfomuseum/iso8601duration
 # github.com/spiffe/go-spiffe/v2 v2.6.0
 ## explicit; go 1.24.0
 github.com/spiffe/go-spiffe/v2/bundle/jwtbundle
