@@ -188,7 +188,7 @@ func main() {
 			cache_opts := &http.GetWithCacheOptions{
 				CheckLastModTime: cache_check_lastmod,
 				Client:           http_cl,
-				// UserAgent:        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0",
+				UserAgent:        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0",
 				BlobCache: blob_c,
 			}
 

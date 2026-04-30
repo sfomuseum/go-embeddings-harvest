@@ -5,8 +5,7 @@ go 1.26.2
 require (
 	github.com/aaronland/go-flickr-api v1.1.8
 	github.com/aaronland/gocloud v1.1.0
-	github.com/gabriel-vasile/mimetype v1.4.13
-	github.com/sfomuseum/go-blobcache v0.0.0-20260430193132-6d6e9acc8440
+	github.com/sfomuseum/go-blobcache v1.0.0
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
 	github.com/sfomuseum/go-embeddings v0.4.1
 	github.com/sfomuseum/go-embeddingsdb v0.11.0
@@ -17,7 +16,7 @@ require (
 	github.com/whosonfirst/go-whosonfirst-iterate/v3 v3.2.0
 	github.com/whosonfirst/go-whosonfirst-reader/v2 v2.0.0
 	github.com/whosonfirst/go-whosonfirst-uri v1.3.0
-	gocloud.dev v0.45.0
+	golang.org/x/time v0.15.0
 )
 
 require (
@@ -162,6 +161,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.40.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
+	gocloud.dev v0.45.0 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/mod v0.34.0 // indirect
@@ -171,7 +171,6 @@ require (
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260311193753-579e4da9a98c // indirect
 	golang.org/x/text v0.36.0 // indirect
-	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.43.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.256.0 // indirect
