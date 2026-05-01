@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"log/slog"
 	"net/url"
@@ -42,7 +41,7 @@ func main() {
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
 	fs.StringVar(&cache_uri, "cache-uri", "null://", "A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached.")
-	fs.BoolVar(&cache_check_lastmod, "cache-check-lastmod", true, "A boolean value to indicate whether the last modified date of an object to harvest should be compared against the local cache.")
+	fs.BoolVar(&cache_check_lastmod, "cache-check-lastmod", false, "A boolean value to indicate whether the last modified date of an object to harvest should be compared against the local cache.")
 
 	fs.StringVar(&output, "output", "-", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
 	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "mobileclip://?client-uri=grpc://localhost:8080", "A registered sfomuseum/go-embeddingsdb/client.Client URI.")
@@ -173,15 +172,12 @@ func main() {
 
 			logger.Debug("Fetch image", "url", im_url)
 
-			im_rsp, err := http.GetWithCacheAndOptions(ctx, cache_opts, im_url)
+			im_body, err := http.GetBytesWithCacheAndOptions(ctx, cache_opts, im_url)
 
 			if err != nil {
 				logger.Error("Failed to retrieve image", "url", im_url, "error", err)
 				return
 			}
-
-			im_body, err := io.ReadAll(im_rsp)
-			im_rsp.Close()
 
 			attrs := map[string]string{
 				"type":               "image",

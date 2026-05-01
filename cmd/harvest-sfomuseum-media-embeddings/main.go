@@ -192,18 +192,10 @@ func main() {
 
 			logger.Debug("Fetch image", "url", im_url)
 
-			im_rsp, err := http.GetWithCacheAndOptions(ctx, cache_opts, im_url)
+			im_body, err := http.GetBytesWithCacheAndOptions(ctx, cache_opts, im_url)
 
 			if err != nil {
 				logger.Error("Failed to retrieve image", "url", im_url, "error", err)
-				return
-			}
-
-			im_body, err := io.ReadAll(im_rsp)
-			im_rsp.Close()
-
-			if err != nil {
-				logger.Error("Failed to read image", "url", im_url, "error", err)
 				return
 			}
 
