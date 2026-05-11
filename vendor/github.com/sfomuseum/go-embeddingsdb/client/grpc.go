@@ -231,7 +231,35 @@ func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options
 		Pagination: grpc_pg,
 	}
 
-	// opts here...
+	filters := make([]*embeddingsdb_grpc.ListRecordsFilter, 0)
+
+	provider := options.GetFilterFromOptions(ctx, "provider", opts...)
+
+	if provider != nil {
+
+		f := &embeddingsdb_grpc.ListRecordsFilter{
+			Column: "provider",
+			Value:  provider.(string),
+		}
+
+		filters = append(filters, f)
+	}
+
+	model := options.GetFilterFromOptions(ctx, "model", opts...)
+
+	if model != nil {
+
+		f := &embeddingsdb_grpc.ListRecordsFilter{
+			Column: "model",
+			Value:  model.(string),
+		}
+
+		filters = append(filters, f)
+	}
+
+	if len(filters) > 0 {
+		grpc_req.Filters = filters
+	}
 
 	grpc_rsp, err := e.client.ListRecords(ctx, grpc_req)
 
@@ -258,12 +286,25 @@ func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options
 func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	grpc_req := &embeddingsdb_grpc.SimilarRecordsRequest{
-		Model:           req.Model,
-		Embeddings:      req.Embeddings,
-		SimilarProvider: req.SimilarProvider,
-		MaxResults:      req.MaxResults,
-		MaxDistance:     req.MaxDistance,
-		Exclude:         req.Exclude,
+		Model:      req.Model,
+		Embeddings: req.Embeddings,
+		Exclude:    req.Exclude,
+	}
+
+	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
+	max_results := options.GetMaxResultsFromOptions(ctx, opts...)
+	max_dist := options.GetMaxDistanceFromOptions(ctx, opts...)
+
+	if similar_provider != nil {
+		grpc_req.SimilarProvider = similar_provider
+	}
+
+	if max_results != nil {
+		grpc_req.MaxResults = max_results
+	}
+
+	if max_dist != nil {
+		grpc_req.MaxDistance = max_dist
 	}
 
 	rsp, err := e.client.SimilarRecords(ctx, grpc_req)
@@ -280,12 +321,28 @@ func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.Simil
 func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.SimilarRecordsByIdRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	grpc_req := &embeddingsdb_grpc.SimilarRecordsByIdRequest{
-		Provider:        req.Provider,
-		DepictionId:     req.DepictionId,
-		Model:           req.Model,
-		SimilarProvider: req.SimilarProvider,
-		MaxResults:      req.MaxResults,
-		MaxDistance:     req.MaxDistance,
+		Provider:    req.Provider,
+		DepictionId: req.DepictionId,
+		Model:       req.Model,
+		//SimilarProvider: req.SimilarProvider,
+		//MaxResults:      req.MaxResults,
+		//MaxDistance:     req.MaxDistance,
+	}
+
+	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
+	max_results := options.GetMaxResultsFromOptions(ctx, opts...)
+	max_dist := options.GetMaxDistanceFromOptions(ctx, opts...)
+
+	if similar_provider != nil {
+		grpc_req.SimilarProvider = similar_provider
+	}
+
+	if max_results != nil {
+		grpc_req.MaxResults = max_results
+	}
+
+	if max_dist != nil {
+		grpc_req.MaxDistance = max_dist
 	}
 
 	rsp, err := e.client.SimilarRecordsById(ctx, grpc_req)

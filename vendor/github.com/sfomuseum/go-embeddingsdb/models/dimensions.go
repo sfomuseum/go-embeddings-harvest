@@ -1,14 +1,36 @@
 package models
 
-var lookup = map[string]int{
-	"apple/mobileclip_s0":                 512,
-	"apple/mobileclip_s1":                 512,
-	"apple/mobileclip_s2":                 512,
-	"google/siglip-base-patch16-224":      1024,
-	"openclip/ViT-g-14#laion2b_s34b_b88k": 1024,
+import (
+	_ "embed"
+	"encoding/json"
+	"sync"
+)
+
+//go:embed dimensions.json
+var dimensions_json []byte
+
+type lookup_table map[string]int
+
+var dimensions = sync.OnceValues(func() (map[string]int, error) {
+
+	var lookup map[string]int
+
+	err := json.Unmarshal(dimensions_json, &lookup)
+	return lookup, err
+})
+
+func KnownDimensions() (map[string]int, error) {
+	return dimensions()
 }
 
 func DeriveDimensionsFromModel(model string) (int, bool) {
+
+	lookup, err := dimensions()
+
+	if err != nil {
+		return 0, false
+	}
+
 	d, exists := lookup[model]
 	return d, exists
 }

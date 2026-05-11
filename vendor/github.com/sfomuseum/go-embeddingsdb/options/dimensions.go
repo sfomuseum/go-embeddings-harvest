@@ -1,5 +1,9 @@
 package options
 
+import (
+	"fmt"
+)
+
 type DimensionsOption struct {
 	Option
 	d int
@@ -20,4 +24,8 @@ func (o *DimensionsOption) Type() OptionType {
 
 func (o *DimensionsOption) Dimensions() int {
 	return o.d
+}
+
+func (o *DimensionsOption) String() string {
+	return fmt.Sprintf("option:dimensions=%d", o.d)
 }

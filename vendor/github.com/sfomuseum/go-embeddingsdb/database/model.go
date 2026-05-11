@@ -15,5 +15,5 @@ func DeriveModelDimensions(ctx context.Context, model string, opts ...options.Op
 		return d, nil
 	}
 
-	return GetDimensionFromOptions(ctx, opts...)
+	return options.GetDimensionFromOptions(ctx, opts...)
 }

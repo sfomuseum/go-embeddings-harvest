@@ -1,5 +1,9 @@
 package options
 
+import (
+	"fmt"
+)
+
 type MaxResultsOption struct {
 	Option
 	d int32
@@ -20,4 +24,8 @@ func (o *MaxResultsOption) Type() OptionType {
 
 func (o *MaxResultsOption) MaxResults() int32 {
 	return o.d
+}
+
+func (o *MaxResultsOption) String() string {
+	return fmt.Sprintf("option:max_results=%d", o.d)
 }

@@ -13,7 +13,7 @@ The DuckDB implementation is generally faster than the SQLite but requires that 
 
 The SQLite implementation while has slower query times but stores (and reads) all its data from disk so it is fast to start.
 
-The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency.
+The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details below). If you can get it to work a Bleve-backed database is pretty great but know that the build process may be a challenge.
 
 The S3Vectors implementation is fast and demonstrates good query times. It is, however, dependent on a commercial service (Amazon Web Services (AWS)) where everything (from storage to queries) is [metered](https://aws.amazon.com/s3/pricing/?nc=sn&loc=4). Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
 
@@ -82,6 +82,8 @@ Valid parameters are:
 | Key | Value | Required | Notes |
 | --- | --- | --- | --- |
 | dimensions | int | no | The number of dimensions for the embeddings being stored. Default is 512. |
+| similarity-metric | string | no | The similarity metric used when comparing embeddings. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Note: This can not be changed after a Bleve index is created. Default is "l2_norm". |
+| optimize-for | string | no | The vector index optimization strategy to use. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Default is "latency". |  
 | max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 5.0. |
 | max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
 
@@ -104,7 +106,13 @@ This is a bit of a chore on a Mac. If you have already installed `libfaiss` from
 ```
 $> git clone ssh://git@github.com/blevesearch/faiss.git
 $> cd faiss
+```
 
+Note: The `blevesearch/faiss` checkpoint is relevant and specific to the version of `blevesearch/bleve` being used. For details consult: https://github.com/blevesearch/bleve/blob/master/docs/vectors.md#pre-requisites
+
+Now issue the following commands:
+
+```
 $> export LDFLAGS="-L/opt/homebrew/opt/llvm/lib" \
 $> export CPPFLAGS="-I/opt/homebrew/opt/llvm/include" \
 $> export CXX=/opt/homebrew/opt/llvm/bin/clang++ \
@@ -123,35 +131,14 @@ $> sudo cp build/c_api/libfaiss_c.dylib /usr/local/lib
 
 _Note that I had to use a completely different set of instructions to get `libfaiss` to compile on an Intel Mac. I don't know. For build instructions for Linux and Windows please consult the [Bleve documentation](https://github.com/blevesearch/bleve/blob/master/docs/vectors.md#setup-instructions)._
 
-#### Building (Bleve)
-
-If that weren't enough the current versioned Bleve release (2.5.7) is not current with changes in either the Bleve fork or `libfaiss` or [blevesearch/go-faiss](https://github.com/blevesearch/go-faiss) so, for the time being, the "easiest" thing is just to clone the most recent build of [blevesearch/bleve](https://github.com/blevesearch/bleve) locally and point to it from a [go.work](https://go.dev/doc/tutorial/workspaces) file. This is not ideal but it's less less-ideal than the alternatives.
+As of the "v2.6.0" release of `blevesearch/bleve` everything _should_ work. Per the documentation you can [sanity check](https://github.com/blevesearch/bleve/blob/master/docs/vectors.md#sanity-check) things as follows:
 
 ```
-$> cd /usr/local/src/
-$> git clone https://github.com/blevesearch/bleve.git /usr/local/src/bleve
 $> cd /usr/local/src/bleve
-$> go mod tidy && go mod vendor
+$> go test -ldflags "-r /usr/local/lib" ./... -tags=vectors
 ```
 
-Now come back to _this_ repository and run:
-
-```
-$> go work init
-```
-
-Edit the `go.work` file to look like this (adjusting for wherever you are keeping your copy of the Bleve source code:
-
-```
-go 1.26.2
-
-use (
-    ./
-    /usr/local/src/bleve
-)    
-```
-
-Remember that you also need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
+Assuming that all the tests pass you can build the tools in _this_ package. Remember that you also need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
 
 ```
 $> make cli TAGS=sqlite,bleve,vectors LDFLAGS='-s -w -r /usr/local/lib'
@@ -163,13 +150,11 @@ go build -tags=sqlite,bleve,vectors -mod readonly -ldflags="-s -w -r /usr/local/
 
 I have observed that under some conditions importing large datasets (using the `parquet-import` tool for example) data corruption can occur. This problem _seems_ to be related to memory-mapping and the `go.etcd.io/bbolt` package but I am not certain. These problems seem to have been resolved on Apple Silicon Macs but I continue to experience them on older Intel-based Macs.
 
-The Bleve source code specifies `bbolt` v1.4.0 even though the last release is 1.4.3 but even that was in 2025 and there have been lots of updates to the source code. I've tried both specifying v1.4.3 and using a `go.work` file to use the most recent code but database corruption and the occassional race condition still manifest on Intel-based Macs.
-
-That said, I am not confident that I have even diagnosed the problem correctly.
-
 ### s3vectors://
 
-Manage embeddings use the Amazon Web Services (AWS) [S3Vectors](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors.html) service. This database implementation relies on a commercial service is metered. Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
+Manage embeddings use the Amazon Web Services (AWS) [S3Vectors](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors.html) service. It also uses the AWS [DynamoDB](https://docs.aws.amazon.com/dynamodb/) service to store metadata properties to enable functionality not otherwise available by the `S3Vectors` service.
+
+This database implementation relies on a commercial service that is metered. Depending on how your database access is configured this could lead to [very large bills](https://murraycole.com/posts/aws-s3-vectors-pricing-deep-dive) at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
 
 ```
 s3vectors://{BUCKET_NAME}?{QUERY_PARAMETERS}
@@ -188,7 +173,7 @@ Valid parameters are:
 | max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 1.0. |
 | max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
 | refresh-tags | bool | no | A boolean flag to update denormalized database properties in to index-specific "tags". Details are discussed below. |
-
+| dynamodb-table | string | no | Use a custom DynamoDB table name for storing and querying record data. Default is "s3vectors". | 
 For example:
 
 ```
@@ -209,6 +194,109 @@ Under the hood this package uses the [aaronland/go-aws/v3/auth](https://github.c
 | `{AWS_PROFILE_NAME}` | This this profile from the default AWS credentials location. |
 | `{AWS_CREDENTIALS_PATH}:{AWS_PROFILE_NAME}` | This this profile from a user-defined AWS credentials location. |
 
-#### Refreshing database properties "tags"
+### IAM policies
 
-The nature of the S3Vectors service means there is no way to quickly derive properties about a "database", like the list of unique models or providers, without crawling the entire data set. To account for this these data are compiled as necessary and stored as index-level "tags" which are read at start-up time to prevent excessive (and potentially expensive) repeated crawling of the index. If you need or want to explicitly refresh those data (tags) you can include the `?refesh-tags=true` query parameter with your URI constructor.
+The following are the _minimal_ IAM policies you will need to have to use an S3Vectors-backed database. The following policies work are designed to work with a minimalist Lambs function but these should be adjusted as needed to the specifics of your situation.
+
+#### S3Vectors
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DiscoverBuckets",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:ListVectorBuckets"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ReadAndQueryAllS3VectorIndices",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:GetIndex",
+                "s3vectors:GetVectors",
+                "s3vectors:QueryVectors",
+                "s3vectors:ListVectors"
+            ],
+            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}/index/*"
+        },
+        {
+            "Sid": "ManageAllS3VectorIndexTags",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:ListTagsForResource",
+                "s3vectors:TagResource",
+                "s3vectors:UntagResource"
+            ],
+            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}/index/*"
+        },
+        {
+            "Sid": "ListIndicesInBucket",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:ListIndexes",
+                "s3vectors:ListIndexes",
+                "s3vectors:GetVectorBucket"
+            ],
+            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}"
+        }
+    ]
+}
+```
+
+#### DynamoDB
+
+Note the use of the `s3vectors` and `s3vectors_metadata` table names in the example below. These are the default values. If you reassign the value of the `s3vectors` table with the `?dynamodb-table={YOUR_TABLE}` parameter, described above, you will need to update this example to replace `s3vectors` and `s3vectors_metadata` with `{YOUR_TABLE}` and `{YOUR_TABLE}_metadata` respecitively.
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DynamoDBTableCreateDescribeAndList",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:CreateTable",
+                "dynamodb:DescribeTable",
+                "dynamodb:ListTables"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/*",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata/*",		
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/*"
+            ]
+        },
+        {
+            "Sid": "DynamoDBPutDelete",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": [
+	        "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors",
+	        "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata"
+	    ]
+        },
+        {
+            "Sid": "DynamoDBQueryOnTableAndGSI",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:Query"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors",
+  		"arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata",		
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/index/by_provider_model",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/index/by_model_provider",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata/index/GSI1"		
+            ]
+        }
+    ]
+}
+```

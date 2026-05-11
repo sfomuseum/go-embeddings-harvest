@@ -258,16 +258,16 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 		return nil, fmt.Errorf("Failed to serialize query, %w", err)
 	}
 
-	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
-	max_results := GetMaxResultsFromOptions(ctx, opts...)
-	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
+	max_distance := options.GetMaxDistanceFromOptions(ctx, opts...)
+	max_results := options.GetMaxResultsFromOptions(ctx, opts...)
+	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
 
 	if max_results == nil {
-		*max_results = db.max_results
+		max_results = &db.max_results
 	}
 
 	if max_distance == nil {
-		*max_distance = db.max_distance
+		max_distance = &db.max_distance
 	}
 
 	conditions := make([]string, 0)
@@ -376,7 +376,7 @@ func (db *DuckDBDatabase) LastUpdate(ctx context.Context, opts ...options.Option
 // ListRecords returns a paginated list of records stored in the database.
 func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
-	filters := GetAllFiltersFromOptions(ctx, opts...)
+	filters := options.GetAllFiltersFromOptions(ctx, opts...)
 	args := make([]any, len(filters))
 
 	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings"
@@ -488,7 +488,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, opts ...options.Option) ([
 
 	logger := slog.Default()
 
-	providers := GetAllProvidersFromOptions(ctx, opts...)
+	providers := options.GetAllProvidersFromOptions(ctx, opts...)
 	count_providers := len(providers)
 
 	q := "SELECT DISTINCT(model) AS model FROM embeddings WHERE model != ''"

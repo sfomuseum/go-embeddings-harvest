@@ -11,6 +11,15 @@ import (
 // Import [*embeddingsdb.Record] records stored in one or more Parquet files identified by 'uris' and add them to an embeddings database using 'cl'.
 func Import(ctx context.Context, cl client.Client, uris ...string) (int64, error) {
 
+	start := int64(0)
+	end := int64(0)
+
+	return ImportWithRange(ctx, cl, start, end, uris...)
+}
+
+// ImportWithRange [*embeddingsdb.Record] records whose position is between 'start' and 'end' (inclusive) stored in one or more Parquet files identified by 'uris' and add them to an embeddings database using 'cl'.
+func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int64, uris ...string) (int64, error) {
+
 	logger := slog.Default()
 	total := int64(0)
 
@@ -28,6 +37,13 @@ func Import(ctx context.Context, cl client.Client, uris ...string) (int64, error
 				return total, err
 			}
 
+			count += 1
+			total += 1
+
+			if start > 0 && start > count {
+				continue
+			}
+
 			err := cl.AddRecord(ctx, rec)
 
 			if err != nil {
@@ -35,10 +51,11 @@ func Import(ctx context.Context, cl client.Client, uris ...string) (int64, error
 				return total, fmt.Errorf("Failed to add record '%s', %w", rec.Key(), err)
 			}
 
-			count += 1
-			total += 1
-
 			logger.Debug("Add record", "key", rec.Key(), "count", count, "total", total)
+
+			if end > 0 && end >= count {
+				break
+			}
 		}
 
 		logger.Debug("Finished iterating uri", "count", count, "total", total)

@@ -1,5 +1,9 @@
 package options
 
+import (
+	"fmt"
+)
+
 type ProviderOption struct {
 	Option
 	provider string
@@ -22,6 +26,10 @@ func (o *ProviderOption) Provider() string {
 	return o.provider
 }
 
+func (o *ProviderOption) String() string {
+	return fmt.Sprintf("option:provider=%s", o.provider)
+}
+
 type SimilarProviderOption struct {
 	Option
 	provider string
@@ -42,4 +50,8 @@ func (o *SimilarProviderOption) Type() OptionType {
 
 func (o *SimilarProviderOption) SimilarProvider() string {
 	return o.provider
+}
+
+func (o *SimilarProviderOption) String() string {
+	return fmt.Sprintf("option:similar_provider=%s", o.provider)
 }

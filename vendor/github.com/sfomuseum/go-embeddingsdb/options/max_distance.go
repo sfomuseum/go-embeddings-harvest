@@ -1,5 +1,9 @@
 package options
 
+import (
+	"fmt"
+)
+
 type MaxDistanceOption struct {
 	Option
 	d float32
@@ -20,4 +24,8 @@ func (o *MaxDistanceOption) Type() OptionType {
 
 func (o *MaxDistanceOption) MaxDistance() float32 {
 	return o.d
+}
+
+func (o *MaxDistanceOption) String() string {
+	return fmt.Sprintf("option:max_distance=%d", o.d)
 }

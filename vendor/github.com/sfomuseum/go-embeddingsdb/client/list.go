@@ -11,6 +11,7 @@ import (
 	"github.com/aaronland/go-pagination/cursor"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 // ListRecordOptions defines configuration options for calling the `ListRecords` method.
@@ -39,7 +40,7 @@ func DefaultListRecordsOptions() *ListRecordsOptions {
 
 // ListRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] iterator for listing all the records in
 // an `embeddingsdb` database. It handles all the pagination requirements derived from 'opts'.
-func ListRecords(ctx context.Context, cl Client, opts *ListRecordsOptions) iter.Seq2[*embeddingsdb.Record, error] {
+func ListRecords(ctx context.Context, cl Client, list_opts *ListRecordsOptions, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
@@ -62,14 +63,14 @@ func ListRecords(ctx context.Context, cl Client, opts *ListRecordsOptions) iter.
 				return
 			}
 
-			pg_opts.PerPage(opts.PerPage)
+			pg_opts.PerPage(list_opts.PerPage)
 
 			page := int64(1)
 
 			for {
 
 				logger.Debug("Query records", "pointer", pg_opts.Pointer())
-				records, pg_rsp, err := cl.ListRecords(ctx, pg_opts)
+				records, pg_rsp, err := cl.ListRecords(ctx, pg_opts, opts...)
 
 				if err != nil {
 					logger.Error("Failed to list records", "pointer", pg_opts.Pointer(), "error", err)
@@ -77,8 +78,8 @@ func ListRecords(ctx context.Context, cl Client, opts *ListRecordsOptions) iter.
 					return
 				}
 
-				if page < opts.StartPage {
-					logger.Debug("Results before start page, skipping", "start", opts.StartPage, "page", page)
+				if page < list_opts.StartPage {
+					logger.Debug("Results before start page, skipping", "start", list_opts.StartPage, "page", page)
 				} else {
 					for _, r := range records {
 
@@ -98,8 +99,8 @@ func ListRecords(ctx context.Context, cl Client, opts *ListRecordsOptions) iter.
 					break
 				}
 
-				if opts.EndPage != -1 && page > opts.EndPage {
-					logger.Debug("Arrived at requested end page", "end page", opts.EndPage, "page", page)
+				if list_opts.EndPage != -1 && page > list_opts.EndPage {
+					logger.Debug("Arrived at requested end page", "end page", list_opts.EndPage, "page", page)
 					break
 				}
 
@@ -110,7 +111,7 @@ func ListRecords(ctx context.Context, cl Client, opts *ListRecordsOptions) iter.
 
 		case database.CountablePaginationType:
 
-			current_page := opts.StartPage
+			current_page := list_opts.StartPage
 			pages := int64(0)
 
 			pg_opts, err := countable.NewCountableOptions()
@@ -120,12 +121,12 @@ func ListRecords(ctx context.Context, cl Client, opts *ListRecordsOptions) iter.
 				return
 			}
 
-			pg_opts.PerPage(opts.PerPage)
+			pg_opts.PerPage(list_opts.PerPage)
 
 			logger := slog.Default()
-			logger = logger.With("start page", opts.StartPage)
-			logger = logger.With("end page", opts.EndPage)
-			logger = logger.With("per page", opts.PerPage)
+			logger = logger.With("start page", list_opts.StartPage)
+			logger = logger.With("end page", list_opts.EndPage)
+			logger = logger.With("per page", list_opts.PerPage)
 
 			logger.Debug("Start pagination")
 
@@ -134,7 +135,7 @@ func ListRecords(ctx context.Context, cl Client, opts *ListRecordsOptions) iter.
 				pg_opts.Pointer(current_page)
 
 				logger.Debug("Query records", "page", current_page, "total page count", pages)
-				records, pg_rsp, err := cl.ListRecords(ctx, pg_opts)
+				records, pg_rsp, err := cl.ListRecords(ctx, pg_opts, opts...)
 
 				if err != nil {
 					logger.Error("Failed to list records", "page", current_page, "error", err)
@@ -155,7 +156,7 @@ func ListRecords(ctx context.Context, cl Client, opts *ListRecordsOptions) iter.
 					pages = pg_rsp.Pages()
 				}
 
-				if opts.EndPage != -1 && current_page >= opts.EndPage {
+				if list_opts.EndPage != -1 && current_page >= list_opts.EndPage {
 					logger.Debug("End page reached", "page", current_page)
 					break
 				}

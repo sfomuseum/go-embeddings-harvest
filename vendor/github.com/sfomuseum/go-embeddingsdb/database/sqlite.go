@@ -302,9 +302,9 @@ func (db *SQLiteDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.Re
 // Find similar records for a given model and record instance.
 func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
-	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
-	max_results := GetMaxResultsFromOptions(ctx, opts...)
-	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
+	max_distance := options.GetMaxDistanceFromOptions(ctx, opts...)
+	max_results := options.GetMaxResultsFromOptions(ctx, opts...)
+	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
 
 	if max_distance == nil {
 		max_distance = &db.max_distance
@@ -469,7 +469,7 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 
 	q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.created, r. attributes FROM %s r, %s v WHERE r.id=v.rowid", db.records_table.Name(), db.vec_table.Name())
 
-	filters := GetAllFiltersFromOptions(ctx, opts...)
+	filters := options.GetAllFiltersFromOptions(ctx, opts...)
 	args := make([]any, len(filters))
 
 	if len(filters) > 0 {

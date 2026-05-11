@@ -1,5 +1,9 @@
 package options
 
+import (
+	"fmt"
+)
+
 type FilterOption struct {
 	Option
 	key   string
@@ -26,4 +30,8 @@ func (o *FilterOption) Key() string {
 
 func (o *FilterOption) Value() any {
 	return o.value
+}
+
+func (o *FilterOption) String() string {
+	return fmt.Sprintf("option:filter=%s=%v", o.key, o.value)
 }

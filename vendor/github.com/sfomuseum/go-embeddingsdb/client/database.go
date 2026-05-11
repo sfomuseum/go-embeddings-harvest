@@ -84,7 +84,6 @@ func (cl *DatabaseClient) Providers(ctx context.Context, opts ...options.Option)
 }
 
 func (cl *DatabaseClient) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
-
 	return cl.db.ListRecords(ctx, pg_opts, opts...)
 }
 
@@ -108,9 +107,6 @@ func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, req *embedding
 		Exclude: []string{
 			record.DepictionId,
 		},
-		SimilarProvider: req.SimilarProvider,
-		MaxDistance:     req.MaxDistance,
-		MaxResults:      req.MaxResults,
 	}
 
 	return cl.SimilarRecords(ctx, similar_req, opts...)
