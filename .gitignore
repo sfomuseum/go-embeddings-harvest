@@ -4,3 +4,4 @@ bin
 go.work*
 *.a
 work
+*.parquet
