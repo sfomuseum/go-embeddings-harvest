@@ -75,7 +75,6 @@ func (cl *DatabaseClient) SimilarRecords(ctx context.Context, req *embeddingsdb.
 }
 
 func (cl *DatabaseClient) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
-
 	return cl.db.Models(ctx, opts...)
 }
 

@@ -7,16 +7,20 @@ import (
 	"log/slog"
 	"time"
 
-	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
 // Export will export all the [*embeddingsdb.Record] records stored in 'db' as Parquet-encoded data to 'wr'.
-func Export(ctx context.Context, cl client.Client, wr io.Writer) (int64, error) {
+func Export(ctx context.Context, cl client.Client, wr io.WriteCloser) (int64, error) {
+
+	p_wr, err := NewWriterWithIoWriteCloser(ctx, wr)
+
+	if err != nil {
+		return 0, err
+	}
 
 	logger := slog.Default()
-	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
 
 	ticker := time.NewTicker(60 * time.Second)
 	done_ch := make(chan bool)
@@ -62,7 +66,7 @@ func Export(ctx context.Context, cl client.Client, wr io.Writer) (int64, error) 
 
 	p_wr.Flush()
 
-	err := p_wr.Close()
+	err = p_wr.Close()
 
 	if err != nil {
 		return count, fmt.Errorf("Failed to close Parquet writer, %w", err)

@@ -106,6 +106,25 @@ func GetAllProvidersFromOptions(ctx context.Context, opts ...Option) []string {
 	return providers
 }
 
+func GetAllModelsFromOptions(ctx context.Context, opts ...Option) []string {
+
+	models := make([]string, 0)
+
+	for _, o := range opts {
+
+		if o.Type() == ModelOptionType {
+
+			v := o.(*ModelOption).Model()
+
+			if !slices.Contains(models, v) {
+				models = append(models, v)
+			}
+		}
+	}
+
+	return models
+}
+
 func GetDimensionFromOptions(ctx context.Context, opts ...Option) (int, error) {
 
 	dims := GetAllDimensionsFromOptions(ctx)

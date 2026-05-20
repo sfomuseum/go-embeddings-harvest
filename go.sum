@@ -304,8 +304,8 @@ github.com/parquet-go/bitpack v1.0.0 h1:AUqzlKzPPXf2bCdjfj4sTeacrUwsT7NlcYDMUQxP
 github.com/parquet-go/bitpack v1.0.0/go.mod h1:XnVk9TH+O40eOOmvpAVZ7K2ocQFrQwysLMnc6M/8lgs=
 github.com/parquet-go/jsonlite v1.0.0 h1:87QNdi56wOfsE5bdgas0vRzHPxfJgzrXGml1zZdd7VU=
 github.com/parquet-go/jsonlite v1.0.0/go.mod h1:nDjpkpL4EOtqs6NQugUsi0Rleq9sW/OtC1NnZEnxzF0=
-github.com/parquet-go/parquet-go v0.29.0 h1:xXlPtFVR51jpSVzf+cgHnNIcb7Xet+iuvkbe0HIm90Y=
-github.com/parquet-go/parquet-go v0.29.0/go.mod h1:navtkAYr2LGoJVp141oXPlO/sxLvaOe3la2JEoD8+rg=
+github.com/parquet-go/parquet-go v0.30.1 h1:Oy6ganNrAdFiVwy7wNmWagfPTWA2X9Z3tVHBc7JtuX8=
+github.com/parquet-go/parquet-go v0.30.1/go.mod h1:navtkAYr2LGoJVp141oXPlO/sxLvaOe3la2JEoD8+rg=
 github.com/paulmach/orb v0.11.1 h1:3koVegMC4X/WeiXYz9iswopaTwMem53NzTJuTF20JzU=
 github.com/paulmach/orb v0.11.1/go.mod h1:5mULz1xQfs3bmQm63QEJA6lNGujuRafwA5S/EnuLaLU=
 github.com/paulmach/protoscan v0.2.1/go.mod h1:SpcSwydNLrxUGSDvXvO0P7g7AuhJ7lcKfDlhJCDw2gY=
@@ -327,10 +327,10 @@ github.com/sfomuseum/go-database v0.0.18 h1:C4JyfixyWUC1pPJdJp1yzMRr58LgrGYClQJw
 github.com/sfomuseum/go-database v0.0.18/go.mod h1:+5BwntUQTv7J5ugQrtS5/lEezZM01pzzok+OSCHrMQU=
 github.com/sfomuseum/go-edtf v1.2.1 h1:vyKvoNa4p6mmwp9AbbEdJoj+A5YK4G7S1QgmSNpXh7s=
 github.com/sfomuseum/go-edtf v1.2.1/go.mod h1:1rP0EJZ/84j3HO80vGcnG2T9MFBDAFyTNtjrr8cv3T4=
-github.com/sfomuseum/go-embeddings v0.4.1 h1:I8hRQO9elsVNidIZM4W9URHcn6Y20te9hcEx2e8lOqU=
-github.com/sfomuseum/go-embeddings v0.4.1/go.mod h1:dk4q19V7RAo6R+VpSiYtrPFyBQHzYbFcG60OJoXNzpk=
-github.com/sfomuseum/go-embeddingsdb v0.15.0 h1:qNB8L4JltJNYUgg9Q4fBjU4p0j9WeDQfBSiieN0I1+s=
-github.com/sfomuseum/go-embeddingsdb v0.15.0/go.mod h1:P2ClQzp9HrM+shbL+qb8Do3RGbMLD0k1nIBMUwZaRoE=
+github.com/sfomuseum/go-embeddings v0.5.0 h1:eVYRNlUQUAjU0EinRBaf0vPOsh0RtzxXojV39J545B8=
+github.com/sfomuseum/go-embeddings v0.5.0/go.mod h1:dk4q19V7RAo6R+VpSiYtrPFyBQHzYbFcG60OJoXNzpk=
+github.com/sfomuseum/go-embeddingsdb v0.17.0 h1:7Qub1ShMymJgoByu4zwuyiSchYh0aWxbrqJZiz3/zgk=
+github.com/sfomuseum/go-embeddingsdb v0.17.0/go.mod h1:iW5wMVyiqtK0ts7qqI+1O4MKsqLuT4hkGiqR4mQ8Jes=
 github.com/sfomuseum/go-encoderfile v0.0.1 h1:ht0GYR0b/KuljcmPIas5/0/nGNKxl9h/TewAtNfhM2c=
 github.com/sfomuseum/go-encoderfile v0.0.1/go.mod h1:zFc9CxM/uEW2vXN6Wk9Zy1aEz3PdXlJVvx8Nzslbe8g=
 github.com/sfomuseum/go-flags v0.12.1 h1:xvg3iEz510JPr9ItPxOOF2C12JnlplodT1V/1Ty7Pg8=
@@ -484,8 +484,8 @@ google.golang.org/genproto/googleapis/api v0.0.0-20260226221140-a57be14db171 h1:
 google.golang.org/genproto/googleapis/api v0.0.0-20260226221140-a57be14db171/go.mod h1:M5krXqk4GhBKvB596udGL3UyjL4I1+cTbK0orROM9ng=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 h1:ggcbiqK8WWh6l1dnltU4BgWGIGo+EVYxCaAPih/zQXQ=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171/go.mod h1:4Hqkh8ycfw05ld/3BWL7rJOSfebL2Q+DVDeRgYgxUU8=
-google.golang.org/grpc v1.81.0 h1:W3G9N3KQf3BU+YuCtGKJk0CmxQNbAISICD/9AORxLIw=
-google.golang.org/grpc v1.81.0/go.mod h1:xGH9GfzOyMTGIOXBJmXt+BX/V0kcdQbdcuwQ/zNw42I=
+google.golang.org/grpc v1.81.1 h1:VnnIIZ88UzOOKLukQi+ImGz8O1Wdp8nAGGnvOfEIWQQ=
+google.golang.org/grpc v1.81.1/go.mod h1:xGH9GfzOyMTGIOXBJmXt+BX/V0kcdQbdcuwQ/zNw42I=
 google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp09yW+WbY/TyQbw=
 google.golang.org/protobuf v1.27.1/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
 google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=

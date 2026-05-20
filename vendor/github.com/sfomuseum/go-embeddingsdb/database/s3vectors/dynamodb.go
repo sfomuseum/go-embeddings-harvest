@@ -343,7 +343,7 @@ func (cl *DynamoDBClient) AddModelProviderMetadata(ctx context.Context, model st
 	return nil
 }
 
-func (cl *DynamoDBClient) GetUniqueMetadataProperty(ctx context.Context, prop string) ([]string, error) {
+func (cl *DynamoDBClient) GetUniqueMetadataProperty(ctx context.Context, prop string, opts ...options.Option) ([]string, error) {
 
 	pk := "SUMMARY#" + strings.ToUpper(prop)
 
@@ -365,10 +365,10 @@ func (cl *DynamoDBClient) GetUniqueMetadataProperty(ctx context.Context, prop st
 
 		sk_value := item["SK"].(*types.AttributeValueMemberS).Value
 
-		delimiterIndex := strings.Index(sk_value, "#")
+		_, after, ok := strings.Cut(sk_value, "#")
 
-		if delimiterIndex != -1 {
-			v := sk_value[delimiterIndex+1:]
+		if ok {
+			v := after
 			results = append(results, v)
 		}
 	}
@@ -391,14 +391,13 @@ func (cl *DynamoDBClient) GetModelsForProvider(ctx context.Context, provider str
 		return nil, err
 	}
 
-	// ... (parse results similarly to GetUniqueList)
 	return parseSKs(out.Items), nil
 }
 
 func (cl *DynamoDBClient) GetProvidersForModel(ctx context.Context, model string) ([]string, error) {
 
 	out, err := cl.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:              aws.String("ModelProviderTable"),
+		TableName:              aws.String(cl.table_metadata),
 		IndexName:              aws.String("GSI1"),
 		KeyConditionExpression: aws.String("SK = :sk AND begins_with(PK, :pkPrefix)"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -471,7 +470,7 @@ func encodeStartKey(key map[string]types.AttributeValue) (string, error) {
 		return "", fmt.Errorf("Missing key")
 	}
 
-	var plain_map map[string]interface{}
+	var plain_map map[string]any
 
 	err := attributevalue.UnmarshalMap(key, &plain_map)
 
@@ -505,7 +504,7 @@ func decodeStartKey(str_key string) (map[string]types.AttributeValue, error) {
 		return nil, fmt.Errorf("Failed to decode key, %w", err)
 	}
 
-	var plain_map map[string]interface{}
+	var plain_map map[string]any
 
 	err = json.Unmarshal(data, &plain_map)
 

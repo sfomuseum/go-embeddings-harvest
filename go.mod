@@ -1,14 +1,14 @@
 module github.com/sfomuseum/go-embeddings-harvest
 
-go 1.26.2
+go 1.26.0
 
 require (
 	github.com/aaronland/go-flickr-api v1.1.8
 	github.com/aaronland/gocloud v1.1.0
 	github.com/sfomuseum/go-blobcache v1.1.3
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
-	github.com/sfomuseum/go-embeddings v0.4.1
-	github.com/sfomuseum/go-embeddingsdb v0.15.0
+	github.com/sfomuseum/go-embeddings v0.5.0
+	github.com/sfomuseum/go-embeddingsdb v0.17.0
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.19.0
 	github.com/whosonfirst/go-reader/v2 v2.1.0
@@ -136,7 +136,7 @@ require (
 	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/parquet-go/bitpack v1.0.0 // indirect
 	github.com/parquet-go/jsonlite v1.0.0 // indirect
-	github.com/parquet-go/parquet-go v0.29.0 // indirect
+	github.com/parquet-go/parquet-go v0.30.1 // indirect
 	github.com/paulmach/orb v0.11.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.25 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
@@ -182,7 +182,7 @@ require (
 	google.golang.org/genproto v0.0.0-20251124214823-79d6a2a48846 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260226221140-a57be14db171 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
-	google.golang.org/grpc v1.81.0 // indirect
+	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/ini.v1 v1.67.2 // indirect
 )

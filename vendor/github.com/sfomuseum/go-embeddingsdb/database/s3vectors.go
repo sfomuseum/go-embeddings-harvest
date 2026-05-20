@@ -812,13 +812,91 @@ func (db *S3VectorsDatabase) Dimensions(ctx context.Context, opts ...options.Opt
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 func (db *S3VectorsDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
-	return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "MODELS")
+	providers := options.GetAllProvidersFromOptions(ctx, opts...)
+
+	switch len(providers) {
+	case 0:
+		return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "MODELS")
+	case 1:
+		return db.dynamodb_client.GetModelsForProvider(ctx, providers[0])
+	default:
+
+		models_key := new(sync.Map)
+		wg := new(sync.WaitGroup)
+
+		for _, p := range providers {
+
+			wg.Go(func() {
+
+				models, err := db.dynamodb_client.GetModelsForProvider(ctx, p)
+
+				if err != nil {
+					slog.Error("Failed to derive models for provider", "provider", p, "error", err)
+					return
+				}
+
+				for _, m := range models {
+					models_key.Store(m, true)
+				}
+			})
+		}
+
+		wg.Wait()
+
+		models := make([]string, 0)
+
+		models_key.Range(func(k, v any) bool {
+			models = append(models, k.(string))
+			return true
+		})
+
+		return models, nil
+	}
 }
 
 // Return the unique list of providers across all the embeddings.
 func (db *S3VectorsDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
-	return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "PROVIDERS")
+	models := options.GetAllModelsFromOptions(ctx, opts...)
+
+	switch len(models) {
+	case 0:
+		return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "PROVIDERS")
+	case 1:
+		return db.dynamodb_client.GetProvidersForModel(ctx, models[0])
+	default:
+
+		providers_key := new(sync.Map)
+		wg := new(sync.WaitGroup)
+
+		for _, m := range models {
+
+			wg.Go(func() {
+
+				providers, err := db.dynamodb_client.GetProvidersForModel(ctx, m)
+
+				if err != nil {
+					slog.Error("Failed to derive providers for model", "model", m, "error", err)
+					return
+				}
+
+				for _, p := range providers {
+					providers_key.Store(p, true)
+				}
+			})
+		}
+
+		wg.Wait()
+
+		providers := make([]string, 0)
+
+		providers_key.Range(func(k, v any) bool {
+			providers = append(providers, k.(string))
+			return true
+		})
+
+		return providers, nil
+	}
 }
 
 // Return the pagination type used by the database.

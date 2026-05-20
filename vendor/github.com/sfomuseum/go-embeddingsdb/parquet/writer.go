@@ -30,6 +30,7 @@ type ParquetWriter struct {
 	batch_size     int
 	buffer         []*embeddingsdb.Record
 	mu             *sync.RWMutex
+	stats          *Statistics
 }
 
 // NewWriter returns a new [ParquetWriter] instance configured using 'uri'. If 'uri' is "-"
@@ -59,10 +60,17 @@ func NewWriter(ctx context.Context, uri string) (*ParquetWriter, error) {
 		wr = w
 	}
 
+	return NewWriterWithIoWriteCloser(ctx, wr)
+}
+
+func NewWriterWithIoWriteCloser(ctx context.Context, wr io.WriteCloser) (*ParquetWriter, error) {
+
 	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
 
 	mu := new(sync.RWMutex)
 	buf := make([]*embeddingsdb.Record, 0)
+
+	stats := NewStatistics()
 
 	pw := &ParquetWriter{
 		writer:         wr,
@@ -70,6 +78,7 @@ func NewWriter(ctx context.Context, uri string) (*ParquetWriter, error) {
 		batch_size:     10000,
 		buffer:         buf,
 		mu:             mu,
+		stats:          stats,
 	}
 
 	return pw, nil
@@ -80,6 +89,10 @@ func (pw *ParquetWriter) Write(rows []*embeddingsdb.Record) (int, error) {
 
 	pw.mu.Lock()
 	defer pw.mu.Unlock()
+
+	for _, r := range rows {
+		pw.stats.AddRecord(r)
+	}
 
 	pw.buffer = append(pw.buffer, rows...)
 
@@ -120,7 +133,13 @@ func (pw *ParquetWriter) Close() error {
 	pw.mu.Lock()
 	defer pw.mu.Unlock()
 
-	_, err := pw.writeBuffer()
+	err := pw.stats.AppendMetadata(pw)
+
+	if err != nil {
+		return fmt.Errorf("Failed to append metadata, %w", err)
+	}
+
+	_, err = pw.writeBuffer()
 
 	if err != nil {
 		return err

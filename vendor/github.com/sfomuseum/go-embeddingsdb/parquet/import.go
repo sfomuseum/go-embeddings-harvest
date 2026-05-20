@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/sfomuseum/go-embeddingsdb/client"
 )
@@ -21,14 +22,32 @@ func Import(ctx context.Context, cl client.Client, uris ...string) (int64, error
 func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int64, uris ...string) (int64, error) {
 
 	logger := slog.Default()
+
+	current := ""
+	count := int64(0)
 	total := int64(0)
+
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
+	go func() {
+
+		for {
+			select {
+			case <-ticker.C:
+				slog.Info("Import stats", "current", current, "count", count, "total", total)
+			}
+		}
+
+	}()
 
 	for _, uri := range uris {
 
+		current = uri
+		count = 0
+
 		logger := slog.Default()
 		logger = logger.With("uri", uri)
-
-		count := int64(0)
 
 		for rec, err := range Iterate(ctx, uri) {
 

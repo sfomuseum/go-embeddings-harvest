@@ -27,5 +27,5 @@ func (o *MaxDistanceOption) MaxDistance() float32 {
 }
 
 func (o *MaxDistanceOption) String() string {
-	return fmt.Sprintf("option:max_distance=%d", o.d)
+	return fmt.Sprintf("option:max_distance=%f", o.d)
 }

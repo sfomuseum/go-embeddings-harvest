@@ -355,7 +355,7 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 	conditions = append(conditions, "v.distance > 0")
 	conditions = append(conditions, fmt.Sprintf("v.distance <= %f", *max_distance))
-	conditions = append(conditions, fmt.Sprintf("k=%d", max_results))
+	conditions = append(conditions, fmt.Sprintf("k=%d", *max_results))
 
 	// replace with ProviderOptions
 

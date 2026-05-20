@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+
 	"log/slog"
 	"net/url"
 	"os"
@@ -86,7 +86,7 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 
 		if q_tls_ca != "" {
 
-			ca_cert, err := ioutil.ReadFile(q_tls_ca)
+			ca_cert, err := os.ReadFile(q_tls_ca)
 
 			if err != nil {
 				return nil, fmt.Errorf("Failed to create CA certificate, %w", err)
