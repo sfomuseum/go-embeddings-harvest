@@ -287,7 +287,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 		placeholders := make([]string, count_exclude)
 
-		for i := 0; i < count_exclude; i++ {
+		for i := range count_exclude {
 			args = append(args, req.Exclude[i])
 			placeholders[i] = "?"
 		}
@@ -610,7 +610,7 @@ func InflateDuckDBRecord(ctx context.Context, rows any) (*embeddingsdb.Record, e
 	var depiction_id string
 	var subject_id string
 	var model string
-	var placeholder_embeddings []interface{}
+	var placeholder_embeddings []any
 	var created int64
 	var str_attrs string
 

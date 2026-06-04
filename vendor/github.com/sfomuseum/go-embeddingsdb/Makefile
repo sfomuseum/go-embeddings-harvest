@@ -13,10 +13,10 @@ godoc:
 	godoc -http=:6060
 
 test:
-	go test -tags $(TAGS) -ldflags="$(LDFLAGS)" -v ./...
+	go test -tags sqlite,vectors,bleve -ldflags="$(LDFLAGS) -r /usr/local/lib" -v ./...
 
 fix:
-	go test -tags $(TAGS) ./...
+	go fix -tags sqlite,vectors,bleve -ldflags="$(LDFLAGS) -r /usr/local/lib" ./...
 
 cli:
 	@make cli-server
@@ -37,6 +37,9 @@ cli-parquet:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-metadata cmd/parquet-metadata/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-gather-stats cmd/parquet-gather-stats/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-append-stats cmd/parquet-append-stats/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-emit cmd/parquet-emit/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-sign cmd/parquet-sign/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-verify cmd/parquet-verify/main.go
 
 cli-inspector:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/embeddingsdb-inspector cmd/inspector/main.go

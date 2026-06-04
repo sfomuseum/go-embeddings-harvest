@@ -165,7 +165,7 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	var path_embeddings string
 	var tmp_embeddings bool
 
-	idx_config := map[string]interface{}{
+	idx_config := map[string]any{
 		"forceSegmentType":    "zap",
 		"forceSegmentVersion": 17, // 16+ required for vector search
 		"unsafe_batch":        true,

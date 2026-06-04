@@ -1,6 +1,8 @@
 package embeddingsdb
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 
 	"github.com/sfomuseum/go-embeddingsdb/oembeddings"
@@ -27,6 +29,49 @@ type Record struct {
 
 func (r *Record) Key() string {
 	return fmt.Sprintf("%s-%s-%s", r.Provider, r.DepictionId, r.Model)
+}
+
+// Return the hex-encoded SHA256 hash of 'r'.
+func (r *Record) Hash() (string, error) {
+
+	enc_r, err := json.Marshal(r)
+
+	if err != nil {
+		return "", err
+	}
+
+	sum := sha256.Sum256(enc_r)
+	return fmt.Sprintf("%x", sum), nil
+}
+
+// Generate a new [Signature] instance for 'r' derived from 'record_sig'.
+func (r *Record) Signature(record_sig []byte) (*Signature, error) {
+
+	if record_sig == nil {
+		return nil, fmt.Errorf("Missing record signature")
+	}
+
+	if len(record_sig) == 0 {
+		return nil, fmt.Errorf("Missing record signature")
+	}
+
+	// Validate armor syntax here?
+
+	record_hash, err := r.Hash()
+
+	if err != nil {
+		return nil, err
+	}
+
+	sig := &Signature{
+		Provider:        r.Provider,
+		Model:           r.Model,
+		DepictionId:     r.DepictionId,
+		RecordHash:      record_hash,
+		RecordSignature: string(record_sig),
+	}
+
+	return sig, nil
 }
 
 // Derive an [oembeddings.OEmbeddings] instance from the attributes in 'r'.

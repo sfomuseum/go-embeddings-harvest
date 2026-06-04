@@ -124,11 +124,6 @@ func CreateTables(ctx context.Context, client *aws_dynamodb.Client, opts *Create
 
 				if table_ready {
 					break
-
-					go func() {
-						ticker.Stop()
-						done_ch <- true
-					}()
 				}
 			}
 

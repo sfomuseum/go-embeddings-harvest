@@ -370,7 +370,7 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 		placeholders := make([]string, count_exclude)
 
-		for i := 0; i < count_exclude; i++ {
+		for i := range count_exclude {
 			args = append(args, req.Exclude[i])
 			placeholders[i] = "?"
 		}

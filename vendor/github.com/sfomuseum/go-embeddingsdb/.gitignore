@@ -9,3 +9,4 @@ work
 *.parquet
 go.work*
 *.zip
+*.pub
