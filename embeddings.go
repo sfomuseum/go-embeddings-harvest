@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sync"
 	"time"
-	
+
 	"github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
@@ -26,10 +26,10 @@ func DeriveEmbeddingsRecords(ctx context.Context, cl embeddings.Embedder[float32
 
 	t1 := time.Now()
 
-	defer func(){
+	defer func() {
 		logger.Debug("Time to derive all embeddings", "time", time.Since(t1))
 	}()
-	
+
 	records := make([]*embeddingsdb.Record, 0)
 
 	wg := new(sync.WaitGroup)
@@ -41,10 +41,10 @@ func DeriveEmbeddingsRecords(ctx context.Context, cl embeddings.Embedder[float32
 
 			t2 := time.Now()
 
-			defer func(){
+			defer func() {
 				logger.Debug("Time to derive embeddings", "model", m, "time", time.Since(t2))
 			}()
-			
+
 			emb_req := &embeddings.EmbeddingsRequest{
 				Model: m,
 				Body:  opts.Body,
@@ -61,7 +61,7 @@ func DeriveEmbeddingsRecords(ctx context.Context, cl embeddings.Embedder[float32
 				logger.Error("Zero-length embeddings", "model", m, "error", err)
 				return
 			}
-			
+
 			db_rec := &embeddingsdb.Record{
 				Provider:    opts.Provider,
 				DepictionId: opts.DepictionId,

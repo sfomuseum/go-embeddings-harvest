@@ -14,7 +14,7 @@ import (
 	"github.com/aaronland/go-flickr-api/client"
 	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-blobcache"
-	"github.com/sfomuseum/go-blobcache/http"	
+	"github.com/sfomuseum/go-blobcache/http"
 	sfom_embeddings "github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest/flickr"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
