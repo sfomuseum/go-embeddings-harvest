@@ -6,6 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	_ "regexp"
 	"sync"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
+	"github.com/tidwall/gjson"
 	"gocloud.dev/blob"
 )
 
@@ -132,7 +134,8 @@ func main() {
 	walk_cb := func(ctx context.Context, rec *jw.WalkRecord, err error) error {
 
 		if err != nil {
-			return nil
+			slog.Error("Walk callback reported an error", "error", err)
+			return err
 		}
 
 		<-throttle
@@ -144,76 +147,155 @@ func main() {
 			}()
 
 			logger := slog.Default()
+			logger = logger.With("lineno", rec.LineNumber)
 
-			depiction_id := ""
-			subject_id := ""
-			subject_url := ""
-			subject_title := ""
-			subject_creditline := ""
+			media_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.online_media.media")
+			media := media_rsp.Array()
+			count := len(media)
 
-			var im_url string
-
-			im_body, err := http.GetBytesWithCacheAndOptions(ctx, cache_opts, im_url)
-
-			if err != nil {
-				logger.Error("Failed to retrieve image", "url", im_url, "error", err)
+			if count == 0 {
 				return
 			}
 
-			attrs := map[string]string{
-				"type":               "image",
-				"preview":            im_url,
-				"subject_url":        subject_url,
-				"subject_title":      subject_title,
-				"subject_creditline": subject_creditline,
-				"provider_name":      "Smithsonian Institution",
-				"provider_url":       "https://si.edu",
-			}
+			logger.Debug("Process record", "count", count)
 
-			derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-				Provider:    "si",
-				DepictionId: depiction_id,
-				SubjectId:   subject_id,
-				Attributes:  attrs,
-				Models:      models,
-				Body:        im_body,
-			}
+			title_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.title.content")
+			subject_title := title_rsp.String()
 
-			records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
-
-			if err != nil {
-				logger.Error("Failed to derive embeddings records", "error", err)
+			if subject_title == "" {
+				logger.Warn("Record is missing title")
 				return
 			}
 
-			if len(records) == 0 {
-				logger.Warn("Failed to derive embeddings")
+			subject_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.record_ID")
+			subject_id := subject_rsp.String()
+
+			if subject_id == "" {
+				logger.Warn("Record is missing ID")
 				return
 			}
 
-			_, err = wr.Write(records)
+			link_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.record_link")
+			subject_url := link_rsp.String()
 
-			if err != nil {
-				logger.Error("Failed to write records buffer", "url", im_url, "error", err)
+			if subject_url == "" {
+				logger.Warn("Record is missing link")
 				return
 			}
 
-			logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+			unit_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.unit_code")
+			unit := unit_rsp.String()
+
+			if unit == "" {
+				logger.Warn("Record is missing unit")
+				return
+			}
+
+			source_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.data_source")
+			provider_name := source_rsp.String()
+
+			if provider_name == "" {
+				logger.Warn("Record is missing provider")
+				return
+			}
+
+			for _, m := range media {
+
+				depiction_rsp := m.Get("id")
+				depiction_id := depiction_rsp.String()
+
+				if depiction_id == "" {
+					logger.Warn("Media item is missing depiction ID")
+					continue
+				}
+
+				im_rsp := m.Get("content")
+				im_url := im_rsp.String()
+
+				if im_url == "" {
+					logger.Warn("Media item is missing image URL (content)")
+					continue
+				}
+
+				im_url = fmt.Sprintf("%s_screen", im_url)
+
+				im_body, err := http.GetBytesWithCacheAndOptions(ctx, cache_opts, im_url)
+
+				if err != nil {
+					logger.Error("Failed to retrieve image", "url", im_url, "error", err)
+					return
+				}
+
+				attrs := map[string]string{
+					"type":               "image",
+					"preview":            im_url,
+					"subject_url":        subject_url,
+					"subject_title":      subject_title,
+					"subject_creditline": "",
+					"provider_name":      provider_name,
+					"provider_url":       fmt.Sprintf("https://si.edu#%s", unit),
+				}
+
+				derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
+					Provider:    fmt.Sprintf("si#%s", unit),
+					DepictionId: depiction_id,
+					SubjectId:   subject_id,
+					Attributes:  attrs,
+					Models:      models,
+					Body:        im_body,
+				}
+
+				records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
+
+				if err != nil {
+					logger.Error("Failed to derive embeddings records", "error", err)
+					return
+				}
+
+				if len(records) == 0 {
+					logger.Warn("Failed to derive embeddings")
+					return
+				}
+
+				_, err = wr.Write(records)
+
+				if err != nil {
+					logger.Error("Failed to write records buffer", "url", im_url, "error", err)
+					return
+				}
+
+				logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+			}
 		})
 
 		return nil
 	}
 
+	// TBD: this is not working as expected; filter on media item count in callback for now
+
+	/*
+		qs := &query.QuerySet{
+			Queries: []*query.Query{
+				&query.Query{
+					Path:  "content.descriptiveNonRepeating.online_media",
+					Match: regexp.MustCompile(`/^\.*$/`),
+				},
+			},
+			Mode: query.QUERYSET_MODE_ALL,
+		}
+	*/
+
 	for _, unit := range units {
 
 		uri := fmt.Sprintf("metadata/edan/%s", unit)
+		slog.Debug("Query unit", "uri", uri)
+
 		b := blob.PrefixedBucket(bucket, uri)
 
 		opts := &walk.WalkOptions{
 			Callback: walk_cb,
 			IsBzip:   false,
-			// -query 'content.descriptiveNonRepeating.online_media=.*'
-			// Add QuerySet here...
+			// QuerySet: qs,
 		}
 
 		err := walk.WalkBucket(ctx, opts, b)

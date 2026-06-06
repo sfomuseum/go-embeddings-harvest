@@ -4,6 +4,8 @@ go 1.26.0
 
 require (
 	github.com/aaronland/go-flickr-api v1.1.8
+	github.com/aaronland/go-json-query v0.1.7
+	github.com/aaronland/go-jsonl v0.1.1
 	github.com/aaronland/go-smithsonian-openaccess v0.2.1
 	github.com/aaronland/gocloud v1.3.0
 	github.com/sfomuseum/go-blobcache v1.1.3
@@ -17,6 +19,7 @@ require (
 	github.com/whosonfirst/go-whosonfirst-iterate/v3 v3.2.0
 	github.com/whosonfirst/go-whosonfirst-reader/v2 v2.0.0
 	github.com/whosonfirst/go-whosonfirst-uri v1.3.0
+	gocloud.dev v0.46.0
 )
 
 require (
@@ -38,8 +41,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.55.0 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.14.5 // indirect
 	github.com/aaronland/go-aws/v3 v3.5.3 // indirect
-	github.com/aaronland/go-json-query v0.1.7 // indirect
-	github.com/aaronland/go-jsonl v0.1.1 // indirect
 	github.com/aaronland/go-pagination v0.3.0 // indirect
 	github.com/aaronland/go-pagination-sql v0.2.0 // indirect
 	github.com/aaronland/go-roster v1.0.0 // indirect
@@ -165,7 +166,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
-	gocloud.dev v0.46.0 // indirect
 	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/mod v0.35.0 // indirect
