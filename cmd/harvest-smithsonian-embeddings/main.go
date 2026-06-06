@@ -8,8 +8,10 @@ import (
 	"os"
 	_ "regexp"
 	"sync"
+	"sync/atomic"
 	"time"
-
+	"strings"
+	
 	_ "github.com/aaronland/go-json-query"
 	jw "github.com/aaronland/go-jsonl/walk"
 	"github.com/aaronland/go-smithsonian-openaccess"
@@ -118,7 +120,7 @@ func main() {
 			case <-done_ch:
 				return
 			case <-ticker.C:
-				slog.Info("Processed rows", "count", count)
+				slog.Info("Processed rows", "count", atomic.LoadInt64(&count))
 			}
 		}
 	}()
@@ -143,6 +145,7 @@ func main() {
 		wg.Go(func() {
 
 			defer func() {
+				atomic.AddInt64(&count, 1)
 				throttle <- true
 			}()
 
@@ -151,13 +154,13 @@ func main() {
 
 			media_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.online_media.media")
 			media := media_rsp.Array()
-			count := len(media)
+			count_m := len(media)
 
-			if count == 0 {
+			if count_m == 0 {
 				return
 			}
 
-			logger.Debug("Process record", "count", count)
+			logger.Debug("Process record", "count", count_m)
 
 			title_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.title.content")
 			subject_title := title_rsp.String()
@@ -193,6 +196,7 @@ func main() {
 				return
 			}
 
+			unit = strings.ToLower(unit)
 			logger = logger.With("unit", unit)
 
 			source_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.data_source")
@@ -241,7 +245,7 @@ func main() {
 				}
 
 				derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
-					Provider:    fmt.Sprintf("si#%s", unit),
+					Provider:    unit,
 					DepictionId: depiction_id,
 					SubjectId:   subject_id,
 					Attributes:  attrs,
