@@ -175,6 +175,8 @@ func main() {
 				return
 			}
 
+			logger = logger.With("subject", subject_id)
+			
 			link_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.record_link")
 			subject_url := link_rsp.String()
 
@@ -191,6 +193,8 @@ func main() {
 				return
 			}
 
+			logger = logger.With("unit", unit)
+			
 			source_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.data_source")
 			provider_name := source_rsp.String()
 
