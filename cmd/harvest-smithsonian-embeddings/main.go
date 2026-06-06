@@ -176,7 +176,7 @@ func main() {
 			}
 
 			logger = logger.With("subject", subject_id)
-			
+
 			link_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.record_link")
 			subject_url := link_rsp.String()
 
@@ -194,7 +194,7 @@ func main() {
 			}
 
 			logger = logger.With("unit", unit)
-			
+
 			source_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.data_source")
 			provider_name := source_rsp.String()
 
@@ -227,7 +227,7 @@ func main() {
 
 				if err != nil {
 					logger.Error("Failed to retrieve image", "url", im_url, "error", err)
-					return
+					continue
 				}
 
 				attrs := map[string]string{
@@ -253,19 +253,19 @@ func main() {
 
 				if err != nil {
 					logger.Error("Failed to derive embeddings records", "error", err)
-					return
+					continue
 				}
 
 				if len(records) == 0 {
 					logger.Warn("Failed to derive embeddings")
-					return
+					continue
 				}
 
 				_, err = wr.Write(records)
 
 				if err != nil {
 					logger.Error("Failed to write records buffer", "url", im_url, "error", err)
-					return
+					continue
 				}
 
 				logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
