@@ -4,22 +4,34 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
+type ImportOptions struct {
+	Client  client.Client
+	Start   int64
+	End     int64
+	Workers int
+}
+
 // Import [*embeddingsdb.Record] records stored in one or more Parquet files identified by 'uris' and add them to an embeddings database using 'cl'.
 func Import(ctx context.Context, cl client.Client, uris ...string) (int64, error) {
 
-	start := int64(0)
-	end := int64(0)
+	opts := &ImportOptions{
+		Client:  cl,
+		Start:   int64(0),
+		End:     int64(0),
+		Workers: 1,
+	}
 
-	return ImportWithRange(ctx, cl, start, end, uris...)
+	return ImportWithOptions(ctx, opts, uris...)
 }
 
-// ImportWithRange [*embeddingsdb.Record] records whose position is between 'start' and 'end' (inclusive) stored in one or more Parquet files identified by 'uris' and add them to an embeddings database using 'cl'.
-func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int64, uris ...string) (int64, error) {
+// ImportWithOptions [*embeddingsdb.Record] records whose position is between 'start' and 'end' (inclusive) stored in one or more Parquet files identified by 'uris' and add them to an embeddings database using 'cl'.
+func ImportWithOptions(ctx context.Context, opts *ImportOptions, uris ...string) (int64, error) {
 
 	logger := slog.Default()
 
@@ -41,6 +53,16 @@ func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int
 
 	}()
 
+	wg := new(sync.WaitGroup)
+
+	throttle := make(chan bool, opts.Workers)
+
+	for i := 0; i < opts.Workers; i++ {
+		throttle <- true
+	}
+
+	err_ch := make(chan error)
+
 	for _, uri := range uris {
 
 		current = uri
@@ -59,26 +81,47 @@ func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int
 			count += 1
 			total += 1
 
-			if start > 0 && start > count {
+			if opts.Start > 0 && opts.Start > count {
 				continue
 			}
 
-			err := cl.AddRecord(ctx, rec)
-
-			if err != nil {
-				logger.Error("Failed to add record", "key", rec.Key(), "error", err)
+			select {
+			case <-ctx.Done():
+				logger.Info("Context signaled done, exiting")
+				return total, nil
+			case err := <-err_ch:
 				return total, fmt.Errorf("Failed to add record '%s', %w", rec.Key(), err)
+			default:
+
+				<-throttle
+
+				wg.Go(func() {
+
+					defer func() {
+						throttle <- true
+					}()
+
+					err := opts.Client.AddRecord(ctx, rec)
+
+					if err != nil {
+						logger.Error("Failed to add record", "key", rec.Key(), "error", err)
+						err_ch <- err
+						return
+					}
+
+					logger.Debug("Add record", "key", rec.Key(), "count", count, "total", total)
+				})
 			}
 
-			logger.Debug("Add record", "key", rec.Key(), "count", count, "total", total)
-
-			if end > 0 && end >= count {
+			if opts.End > 0 && opts.End >= count {
 				break
 			}
 		}
 
 		logger.Debug("Finished iterating uri", "count", count, "total", total)
 	}
+
+	wg.Wait()
 
 	logger.Debug("Finished importing all", "total", total)
 	return total, nil

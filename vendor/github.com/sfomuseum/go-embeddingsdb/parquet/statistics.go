@@ -11,15 +11,26 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
+// Statistics holds aggregated information about a collection of
+// embeddingsdb.Record entries.
 type Statistics struct {
-	Models          []string            `json:"models"`
-	Providers       []string            `json:"providers"`
-	ModelProviders  map[string][]string `json:"model_providers"`
-	ModelDimensions map[string]int      `json:"model_dimensions"`
-	ProviderModels  map[string][]string `json:"provider_models"`
-	mu              *sync.RWMutex
+	// Models is the list of distinct model names that have been seen.
+	Models []string `json:"models"`
+	// Providers is the list of distinct provider names that have been seen.
+	Providers []string `json:"providers"`
+	// ModelProviders maps a model name to the list of providers that have
+	// produced embeddings for that model.
+	ModelProviders map[string][]string `json:"model_providers"`
+	// ModelDimensions maps a model name to the dimensionality of its embeddings.
+	ModelDimensions map[string]int `json:"model_dimensions"`
+	// ProviderModels maps a provider name to the list of models that have
+	// produced embeddings for that provider.
+	ProviderModels map[string][]string `json:"provider_models"`
+	mu             *sync.RWMutex
 }
 
+// NewStatistics creates a new, empty Statistics instance.  The returned
+// value is safe for concurrent use.
 func NewStatistics() *Statistics {
 
 	models := make([]string, 0)
@@ -43,15 +54,8 @@ func NewStatistics() *Statistics {
 	return s
 }
 
-func (s *Statistics) AddRecord(r any) error {
-
-	var rec *embeddingsdb.Record
-	switch r.(type) {
-	case *embeddingsdb.Record:
-		rec = r.(*embeddingsdb.Record)
-	default:
-		return fmt.Errorf("Invalid record type")
-	}
+// AddRecord updates the Statistics with information from a single record.
+func (s *Statistics) AddRecord(rec *embeddingsdb.Record) error {
 
 	s.mu.Lock()
 
@@ -97,7 +101,12 @@ func (s *Statistics) AddRecord(r any) error {
 	return nil
 }
 
+// AppendMetadata writes the collected statistics to the supplied ParquetWriter
+// as key/value metadata.  The keys are namespaced with the prefix "embeddingsdb:"
+// to avoid collisions with other writers.
 func (s *Statistics) AppendMetadata(wr *ParquetWriter) error {
+
+	s.mu.Lock()
 
 	p_wr := wr.ParquetWriter()
 
@@ -116,9 +125,12 @@ func (s *Statistics) AppendMetadata(wr *ParquetWriter) error {
 		p_wr.SetKeyValueMetadata(fmt.Sprintf("embeddingsdb:provider:%s:models", k), strings.Join(v, ";"))
 	}
 
+	s.mu.Unlock()
 	return nil
 }
 
+// GatherStatistics walks through one or more Parquet files and builds a
+// Statistics instance that summarises all records found.
 func GatherStatistics(ctx context.Context, uris ...string) (*Statistics, error) {
 
 	stats := NewStatistics()
@@ -130,6 +142,9 @@ func GatherStatistics(ctx context.Context, uris ...string) (*Statistics, error) 
 			if err != nil {
 				return nil, err
 			}
+
+			// There isn't much point in doing this concurrently since
+			// stats will lock access anyway...
 
 			stats.AddRecord(row)
 		}

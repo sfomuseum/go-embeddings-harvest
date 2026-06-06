@@ -8,11 +8,17 @@ import (
 	"github.com/parquet-go/parquet-go/format"
 )
 
+// ReadSeekerAt is the combination of io.ReadSeeker and io.ReaderAt.
 type ReadSeekerAt interface {
 	io.ReadSeeker
 	io.ReaderAt
 }
 
+// KeyValueMetadata extracts the key/value metadata map from the
+// Parquet file represented by 'r'.
+// The function first obtains the file's metadata via Metadata and
+// then converts the format.FileMetaData.KeyValueMetadata slice
+// into a map[string]string.
 func KeyValueMetadata(r ReadSeekerAt) (map[string]string, error) {
 
 	meta, err := Metadata(r)
@@ -24,6 +30,10 @@ func KeyValueMetadata(r ReadSeekerAt) (map[string]string, error) {
 	return KeyValueMetadataFromFileMetaData(meta)
 }
 
+// KeyValueMetadataFromFileMetaData converts a format.FileMetaData
+// instance into a simple map of key/value strings.  Each key/value
+// pair in the FileMetaData.KeyValueMetadata slice is added to the
+// returned map.
 func KeyValueMetadataFromFileMetaData(meta *format.FileMetaData) (map[string]string, error) {
 
 	kv_meta := make(map[string]string)
@@ -35,6 +45,8 @@ func KeyValueMetadataFromFileMetaData(meta *format.FileMetaData) (map[string]str
 	return kv_meta, nil
 }
 
+// Metadata retrieves the parquet-go format.FileMetaData for the
+// Parquet file represented by 'r'.
 func Metadata(r ReadSeekerAt) (*format.FileMetaData, error) {
 
 	sz, err := r.Seek(0, io.SeekEnd)
