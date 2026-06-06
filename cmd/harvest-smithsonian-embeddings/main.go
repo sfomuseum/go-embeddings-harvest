@@ -7,11 +7,11 @@ import (
 	"log/slog"
 	"os"
 	_ "regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-	"strings"
-	
+
 	_ "github.com/aaronland/go-json-query"
 	jw "github.com/aaronland/go-jsonl/walk"
 	"github.com/aaronland/go-smithsonian-openaccess"
@@ -207,6 +207,14 @@ func main() {
 				return
 			}
 
+			credit_rsp := gjson.GetBytes(rec.Body, "content.freetext.creditLine.0.content")
+			subject_creditline := credit_rsp.String()
+
+			if subject_creditline == "" {
+				logger.Warn("Record is missing creditline.")
+				// return
+			}
+
 			for _, m := range media {
 
 				depiction_rsp := m.Get("id")
@@ -239,7 +247,7 @@ func main() {
 					"preview":            im_url,
 					"subject_url":        subject_url,
 					"subject_title":      subject_title,
-					"subject_creditline": "",
+					"subject_creditline": subject_creditline,
 					"provider_name":      provider_name,
 					"provider_url":       fmt.Sprintf("https://si.edu#%s", unit),
 				}
