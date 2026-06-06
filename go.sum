@@ -65,8 +65,8 @@ github.com/aaronland/go-pagination-sql v0.2.0 h1:WVesObJVvwawIgkl6Twot9DXia09qiZ
 github.com/aaronland/go-pagination-sql v0.2.0/go.mod h1:Thovmz045/sxI0actKFyGLzIKmlCK4R9Qi4gS742PbY=
 github.com/aaronland/go-roster v1.0.0 h1:FRDGrTqsYySKjWnAhbBGXyeGlI/o5/t9FZYCbUmyQtI=
 github.com/aaronland/go-roster v1.0.0/go.mod h1:KIsYZgrJlAsyb9LsXSCvlqvbcCBVjCSqcQiZx42i9ro=
-github.com/aaronland/go-smithsonian-openaccess v0.2.1 h1:AvbYU6ayFwswD6QwzAdvJ9KT0625AoGm3rkJGY4fhTs=
-github.com/aaronland/go-smithsonian-openaccess v0.2.1/go.mod h1:KLFZ6y1hidCpALa+87XhhCAGid/NYNuvDRhdsFLmEKk=
+github.com/aaronland/go-smithsonian-openaccess v0.3.0 h1:nP68MM5RpUCOlE9hsUO7ZiKgHG3eRTzCUOLFGi8Fwhs=
+github.com/aaronland/go-smithsonian-openaccess v0.3.0/go.mod h1:0oWxrLHZz5seMQY1N4uOYWNKZXT5fcsr9otCIwQxg48=
 github.com/aaronland/gocloud v1.3.0 h1:G1jloXZFuupa1IkWibYSu5xSrmg08mlSXr+Rc9o2YSo=
 github.com/aaronland/gocloud v1.3.0/go.mod h1:jf8kNQ8VM0got+so6/gdmYwf5hOghDj0By+Z2Cq5tSA=
 github.com/alecthomas/assert/v2 v2.10.0 h1:jjRCHsj6hBJhkmhznrCzoNpbA3zqy0fYiUcYZP/GkPY=

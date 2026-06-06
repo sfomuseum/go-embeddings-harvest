@@ -166,7 +166,7 @@ github.com/aaronland/go-pagination-sql
 # github.com/aaronland/go-roster v1.0.0
 ## explicit; go 1.16
 github.com/aaronland/go-roster
-# github.com/aaronland/go-smithsonian-openaccess v0.2.1
+# github.com/aaronland/go-smithsonian-openaccess v0.3.0
 ## explicit; go 1.26
 github.com/aaronland/go-smithsonian-openaccess
 github.com/aaronland/go-smithsonian-openaccess/edan

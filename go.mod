@@ -6,7 +6,7 @@ require (
 	github.com/aaronland/go-flickr-api v1.1.8
 	github.com/aaronland/go-json-query v0.1.7
 	github.com/aaronland/go-jsonl v0.1.1
-	github.com/aaronland/go-smithsonian-openaccess v0.2.1
+	github.com/aaronland/go-smithsonian-openaccess v0.3.0
 	github.com/aaronland/gocloud v1.3.0
 	github.com/sfomuseum/go-blobcache v1.1.3
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1

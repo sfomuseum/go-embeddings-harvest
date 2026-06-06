@@ -184,8 +184,14 @@ func main() {
 			subject_url := link_rsp.String()
 
 			if subject_url == "" {
+				// NMAH doesn't always have record_link?
+				guid_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.guid")
+				subject_url = guid_rsp.String()
+			}
+			
+			if subject_url == "" {
 				logger.Warn("Record is missing link")
-				return
+				// return
 			}
 
 			unit_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.unit_code")
