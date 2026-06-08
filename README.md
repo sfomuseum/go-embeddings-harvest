@@ -323,6 +323,40 @@ Usage:
 
 * https://github.com/sfomuseum-data/sfomuseum-data-media-collection
 
+### harvest-smithsonain-embeddings
+
+Generate Parquet-encoded embeddings from the Smithsonian (SI) open data release.
+
+```
+$> ./bin/harvest-smithsonian-embeddings -h
+Generate Parquet-encoded embeddings from the Smithsonian (SI) open data release.
+Usage:
+	./bin/harvest-smithsonian-embeddings [options]Valid options are:
+  -bucket-uri string
+    	A valid GoCloud bucket URI. Valid schemes are: file://, s3:// and si:// which is signals that data should be retrieved from the Smithsonian's 'smithsonian-open-access' S3 bucket. (default "si://")
+  -cache-check-lastmod
+    	A boolean value to indicate whether the last modified date of an object to harvest should be compared against the local cache.
+  -cache-uri string
+    	A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached. (default "null://")
+  -embeddings-client-uri string
+    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
+  -model value
+    	One or more models to derive embeddings for. This may also be a comma-separated list.
+  -output string
+    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT.
+  -unit value
+    	The Smithsonian "unit" code to generate embeddings for (for example: nmah, nasm, saam, etc.).
+  -verbose
+    	Enable verbose (debug) logging.
+  -workers int
+    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
+```
+
+#### See also
+
+* https://registry.opendata.aws/smithsonian-open-access/
+* https://github.com/aaronland/go-smithsonian-openaccess
+
 ## See also
 
 * https://github.com/sfomuseum/go-embeddings
