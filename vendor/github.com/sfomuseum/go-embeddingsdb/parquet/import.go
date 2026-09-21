@@ -53,6 +53,7 @@ func ImportWithOptions(ctx context.Context, opts *ImportOptions, uris ...string)
 
 	}()
 
+	seen := new(sync.Map)
 	wg := new(sync.WaitGroup)
 
 	throttle := make(chan bool, opts.Workers)
@@ -100,6 +101,14 @@ func ImportWithOptions(ctx context.Context, opts *ImportOptions, uris ...string)
 					defer func() {
 						throttle <- true
 					}()
+
+					key := rec.Key()
+					_, ok := seen.LoadOrStore(key, true)
+
+					if ok {
+						logger.Warn("Record already indexed, skipping", "key", key)
+						return
+					}
 
 					err := opts.Client.AddRecord(ctx, rec)
 

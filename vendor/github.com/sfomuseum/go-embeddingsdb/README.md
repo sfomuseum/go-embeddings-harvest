@@ -15,9 +15,56 @@ For background, please consult the following blog posts:
 * [Updates (and additions) to machine-learning tools running on consumer hardware](https://millsfield.sfomuseum.org/blog/2026/02/10/docent/), February 2026
 * [Similar object images derived using the MobileCLIP computer-vision models](https://millsfield.sfomuseum.org/blog/2026/01/09/similar/), January 2026
 
-## Documentation
+## tl;dr
 
-At this time `godoc` documentation is incomplete.
+This section documents some simple copy-and-paste steps for creating a new database, adding some data to it and viewing the results in a web application. Since these tools are written in Go you will need to [download and install Go](https://go.dev/dl) to use them.
+
+### Create a new database
+
+Start the `server` tool which will create a new database and expose access to it over a `gRPC` endpoint.
+
+```
+$> go run ./cmd/server/main.go \
+	-server-uri 'grpc://localhost:8081?database-uri={database}' \
+	-database-uri 'sqlite://?dsn=test.db&dimensions=1152'
+```
+
+Two thing to note:
+
+1. This command creates a new SQLite database stored in `test.db`. In-memory databases are not supported at this time (this is a bug).
+2. It creates the database for storing vector embeddings with 1152 dimensions. This is relevant for importing data in to the server (below).
+
+### Import some data
+
+Import the [SFO Museum Instagram 1152-dimension vector embeddings](https://static.sfomuseum.org/embeddings/index.html#sfomuseum). These can be imported from a local file on disk or from a remote URL (as in this example).
+
+```
+$> go run cmd/parquet-import/main.go \
+	-client-uri grpc://localhost:8081 \
+	https://static.sfomuseum.org/embeddings/sfomuseum-instagram-1152-siglip2-naflex-20260424.parquet
+```
+
+You can repeat this process for as many different data sources as you'd like so long as their "dimensionality" is 1152. For example. vector embedding data from the [National Gallery of Art](https://static.sfomuseum.org/embeddings/index.html#nga), the [Museum of Modern Art](https://static.sfomuseum.org/embeddings/index.html#moma), the [Smithsonian](https://static.sfomuseum.org/embeddings/index.html#si) or the [Metropolitan Museum of Art](https://huggingface.co/metmuseum/datasets).
+
+### Look at the data
+
+Start the `inspector` tool which will serve a simple web application for browsing the data stored (and exposed) by the `server` tool above.
+
+```
+$> go run cmd/inspector/main.go \
+	-client-uri grpc://localhost:8081 \
+	-server-uri http://localhost:8080
+```
+
+This launches a web application at `http://localhost:8080`. When you load that URL in your web browser you will see something like this:
+
+![](docs/images/go-embeddingsdb-tldr-inspector.png)
+
+Clicking on an image's "depiction ID" will show you that image and other images with similar vector embeddings:
+
+![](docs/images/go-embeddingsdb-tldr-inspector-detail.png)
+
+While it technically possible to search these vector embeddings with custom text or image-based queries that requires starting an entirely _other_ service (in order to generate vector embeddings to compare against) and, as such, is out of scope for this example.
 
 ## Concepts
 
@@ -147,16 +194,15 @@ type Client interface {
 
 ## Databases
 
-
 Database documentation has been moved in to [database/README.md](database/README.md) but here's the "tl;dr".
 
-The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time.
+The SQLite implementation while has slower query times than DuckDB but stores (and reads) all its data from disk so it is fast to start. It is enabled by default.
 
-The SQLite implementation while has slower query times but stores (and reads) all its data from disk so it is fast to start.
+The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time. It is enabled with the `duckdb` build tag, described below.
 
-The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details in [database/README.md](database/README.md#bleve)). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency.
+The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details in [database/README.md](database/README.md#bleve)) which is "finnicky" at best. It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency. It is enabled with the `bleve` and `vector` build tags, described below.
 
-The S3Vectors implementation is fast and demonstrates good query times. It is, however, dependent on a commercial service (Amazon Web Services (AWS)) where everything (from storage to queries) is [metered](https://aws.amazon.com/s3/pricing/?nc=sn&loc=4). Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
+The S3Vectors implementation is fast and demonstrates good query times. It is, however, dependent on a commercial service (Amazon Web Services (AWS)) where everything (from storage to queries) is [metered](https://aws.amazon.com/s3/pricing/?nc=sn&loc=4). Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings. It is enabled by default.
 
 ## Servers
 
@@ -168,12 +214,11 @@ Client documentation has been moved in to [client/README.md](client/README.md)
 
 ## Tools
 
-The easiest way to build the included tools is to run the handy `cli` Makefile target (after you've run `go mod tidy && go mod vendor` for reasons described below). For example:
+The easiest way to build the included tools is to run the handy `cli` Makefile target. For example:
 
 ```
 $> git clone git@github.com:sfomuseum/go-embeddingsdb.git
 $> cd go-embeddingsdb
-$> go mod tidy && go mod vendor
 
 $> make cli
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
@@ -190,14 +235,6 @@ Tools documentation has been moved in to [cmd/README.md](cmd/README.md)
 
 What follows are "known knowns", gotchas and other details that may creep when building tools. This gets in to the technical weeds so if that's not your thing you can stop reading now.
 
-### DuckDB
-
-DuckDB is a dependency regardless of build tags (described below).
-
-This package uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
-
-Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See below [for details](#).
-
 ### Build tags
 
 Build tags are used to enable support for various features. The default set of tags is empty but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
@@ -206,15 +243,17 @@ Build tags are used to enable support for various features. The default set of t
 
 The `bleve` tag adds support for [Bleve](https://blevesearch.com/) document store as an embeddings database. Note that the `vectors` tags is also necessary.
 
-#### no_duckdb
+#### duckdb
 
-The `no_duckdb` tag disables the availability of DuckDB as a database source. This is mostly so that the `embeddingsdb-inspector` tool can be compiled to run as an AWS Lambda function.
+The `duckdb` tag add supports for [DuckDB](https://www.duckdb.org) as a database source.
 
-#### sqlite
+This package uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
 
-The `sqlite` tag adds support for the [SQLite](https://sqlite.org/) database as an embeddings database. This uses the [sqlite-vec](https://alexgarcia.xyz/sqlite-vec/) extension for vector embeddings support.
+Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See the [macos documentation](macos) for details.
 
-_Note: As of this writing only the Go-language [CGO bindings](https://github.com/asg017/sqlite-vec-go-bindings?tab=readme-ov-file#cgo-bindings) are supported. Support for "pure Go" bindings will be added in future releases._
+#### duckdb_iter
+
+The `duckdb_iter` tag add supports for iterating through Parquet files using [DuckDB](https://www.duckdb.org).
 
 #### vectors
 

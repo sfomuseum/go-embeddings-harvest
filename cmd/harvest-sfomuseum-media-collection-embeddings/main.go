@@ -19,10 +19,10 @@ import (
 	"github.com/sfomuseum/go-flags/multi"
 	"github.com/tidwall/gjson"
 	"github.com/whosonfirst/go-reader/v2"
-	"github.com/whosonfirst/go-whosonfirst-feature/properties"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
-	wof_reader "github.com/whosonfirst/go-whosonfirst-reader/v2"
-	"github.com/whosonfirst/go-whosonfirst-uri"
+	"github.com/whosonfirst/go-whosonfirst/v4/feature/properties"
+	"github.com/whosonfirst/go-whosonfirst/v4/iterate"
+	wof_reader "github.com/whosonfirst/go-whosonfirst/v4/reader"
+	"github.com/whosonfirst/go-whosonfirst/v4/uri"
 )
 
 func main() {

@@ -76,10 +76,24 @@ func NewOllamaEmbedder[T Float](ctx context.Context, uri string) (Embedder[T], e
 
 func (e *OllamaEmbedder[T]) TextEmbeddings(ctx context.Context, req *EmbeddingsRequest) (EmbeddingsResponse[T], error) {
 
-	cl_rsp, err := e.client.embeddings(ctx, e.model, string(req.Body))
+	model := e.model
+
+	if req.Model != "" {
+		model = req.Model
+	}
+
+	if model == "" {
+		return nil, fmt.Errorf("Missing model")
+	}
+
+	cl_rsp, err := e.client.embeddings(ctx, model, string(req.Body))
 
 	if err != nil {
 		return nil, err
+	}
+
+	if len(cl_rsp.Embeddings) == 0 {
+		return nil, fmt.Errorf("Model returned no embeddings")
 	}
 
 	e32 := cl_rsp.Embeddings[0]
@@ -106,4 +120,8 @@ func (e *OllamaEmbedder[T]) TextEmbeddings(ctx context.Context, req *EmbeddingsR
 
 func (e *OllamaEmbedder[T]) ImageEmbeddings(ctx context.Context, req *EmbeddingsRequest) (EmbeddingsResponse[T], error) {
 	return nil, NotImplemented
+}
+
+func (e *OllamaEmbedder[T]) Close() error {
+	return nil
 }
