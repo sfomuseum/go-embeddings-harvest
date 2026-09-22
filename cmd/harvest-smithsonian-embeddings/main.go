@@ -188,7 +188,7 @@ func main() {
 				guid_rsp := gjson.GetBytes(rec.Body, "content.descriptiveNonRepeating.guid")
 				subject_url = guid_rsp.String()
 			}
-			
+
 			if subject_url == "" {
 				logger.Warn("Record is missing link")
 				// return
