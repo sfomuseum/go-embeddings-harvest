@@ -131,18 +131,17 @@ func main() {
 	/*
 
 
-	for records, err := harvester.Iterate() {
+		for records, err := harvester.Iterate() {
 
-		if err != nil {
-			log.Fatal(err)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			), err = wr.Write(records)
 		}
-
-		), err = wr.Write(records)
-	}
 
 	*/
 
-	
 	wg := new(sync.WaitGroup)
 
 	for row, err := range objects_r.Iterate() {

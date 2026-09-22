@@ -10,6 +10,7 @@ vuln:
 	govulncheck -show verbose ./...
 
 cli:
+	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-embeddings cmd/harvest-embeddings/main.go
 	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-flickr-embeddings cmd/harvest-flickr-embeddings/main.go
 	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-nga-embeddings cmd/harvest-nga-embeddings/main.go
 	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-moma-embeddings cmd/harvest-moma-embeddings/main.go
