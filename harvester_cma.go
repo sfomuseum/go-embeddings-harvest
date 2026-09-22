@@ -128,6 +128,8 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 				logger = logger.With("object", row["accession_number"])
 				
 				all_records := make( []*embeddingsdb.Record, 0)
+
+				logger.Debug("Process images for object", "count", len(images))
 				
 				for _, im_url := range images {
 
