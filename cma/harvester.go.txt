@@ -1,0 +1,126 @@
+package cma
+
+import (
+	"context"
+	"iter"
+	"sync"
+	"log/slog"
+	"strings"
+	
+	"github.com/tidwall/gjson"
+	"github.com/sfomuseum/go-blobcache/http"	
+)
+
+type ClevelandMuseumArtHarvester  struct {
+	harvest.Havester
+	throttle chan bool
+}
+
+func NewClevelandMuseumArtHarvester(ctx context.Context, uri string) (harvest.Harvester, error) {
+
+	h := &ClevelandMuseumArtHarvester{}
+	return h, nil
+}
+
+func Iterate (h *ClevelandMuseumArtHavester) Iterate(ctx context.Context) iter.Seq2[[]*embeddingsdb.Record, error] {
+
+	return func(yield func([]*embeddingsdb.Record, error) bool) {
+		
+		wg := new(sync.WaitGroup)
+		
+		for row, err := range objects_r.Iterate() {
+			
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+			
+			<-h.throttle
+
+			wg.Go(func() {
+				
+				defer func() {
+					h.throttle <- true
+				}()
+				
+				if row["image_web"] == "" {
+					return
+				}
+				
+				images := []string{
+					row["image_web"],
+				}
+				
+				if row["alternate_images"] != "" {
+					
+					alt_str := strings.ReplaceAll(row["alternate_images"], "'", "\"")
+					rsp := gjson.Get(alt_str, "#.web.url")
+					
+					for _, im := range rsp.Array() {
+						images = append(images, im.String())
+					}
+				}
+				
+				for _, im_url := range images {
+					
+					fname := filepath.Base(im_url)
+					
+					depiction_id := fmt.Sprintf("%s#%s", row["accession_number"], fname)
+					subject_id := row["accession_number"]
+					
+					logger := slog.Default()				
+					logger = logger.With("subject", subject_id)
+					logger = logger.With("depiction", depiction_id)
+					
+					logger.Debug("Fetch image", "url", im_url)
+					
+					im_body, err := http.GetBytesWithCacheAndOptions(ctx, cache_opts, im_url)
+					
+					if err != nil {						
+						logger.Error("Failed to retrieve image", "url", im_url, "error", err)
+						return
+					}
+					
+					attrs := map[string]string{
+						"type":               "image",
+						"preview":            im_url,
+						"subject_url":        row["url"],
+						"subject_title":      row["title"],
+						"subject_creditline": row["tombstone"],
+						"provider_name":      "Cleveland Museum of Art",
+						"provider_url":       "https://clevelandart.org/",
+					}
+					
+					derive_opts := &harvest.DeriveEmbeddingsRecordsOptions{
+						Provider:    "cma",
+						DepictionId: depiction_id,
+						SubjectId:   subject_id,
+						Attributes:  attrs,
+						Models:      models,
+						Body:        im_body,
+					}
+					
+					records, err := harvest.DeriveEmbeddingsRecords(ctx, emb_cl, derive_opts)
+					
+					if err != nil {
+						logger.Error("Failed to derive embeddings records", "error", err)
+						return
+					}
+					
+					if len(records) == 0 {
+						logger.Warn("Failed to derive embeddings")
+						return
+					}
+
+					if !yield(records, nil) {
+						return
+					}
+					
+					logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+				}
+			})
+			
+			wr.Flush()
+		}
+	}
+}

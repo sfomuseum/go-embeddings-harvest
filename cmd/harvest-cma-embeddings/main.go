@@ -128,6 +128,21 @@ func main() {
 		throttle <- true
 	}
 
+	/*
+
+
+	for records, err := harvester.Iterate() {
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		), err = wr.Write(records)
+	}
+
+	*/
+
+	
 	wg := new(sync.WaitGroup)
 
 	for row, err := range objects_r.Iterate() {
@@ -170,8 +185,8 @@ func main() {
 
 				fname := filepath.Base(im_url)
 
-				depiction_id := fmt.Sprintf("%s#%s", row["id"], fname)
-				subject_id := row["id"]
+				depiction_id := fmt.Sprintf("%s#%s", row["accession_number"], fname)
+				subject_id := row["accession_number"]
 
 				logger = logger.With("subject", subject_id)
 				logger = logger.With("depiction", depiction_id)
