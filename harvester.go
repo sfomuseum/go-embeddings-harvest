@@ -21,6 +21,7 @@ type IterateOptions struct {
 	CacheOptions     *http.GetWithCacheOptions
 	Throttle         chan bool
 	Models           []string
+	PreCache         bool
 }
 
 type Harvester interface {

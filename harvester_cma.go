@@ -48,6 +48,10 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
 
+		// TBD: Iterate through objects_r twice, first to calculate total count
+		// and second to process actual records. This would allow for a more-better
+		// progress meter...
+
 		objects_r, err := csvdict.NewReaderFromPath(h.path_objects)
 
 		if err != nil {
@@ -126,11 +130,11 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 
 				logger := slog.Default()
 				logger = logger.With("object", row["accession_number"])
-				
-				all_records := make( []*embeddingsdb.Record, 0)
+
+				all_records := make([]*embeddingsdb.Record, 0)
 
 				logger.Debug("Process images for object", "count", len(images))
-				
+
 				for _, im_url := range images {
 
 					fname := filepath.Base(im_url)
@@ -149,6 +153,11 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 					if err != nil {
 						logger.Error("Failed to retrieve image", "url", im_url, "error", err)
 						err_ch <- err
+						return
+					}
+
+					if opts.PreCache {
+						records_ch <- all_records
 						return
 					}
 
@@ -180,11 +189,6 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 					}
 
 					all_records = append(all_records, records...)
-				}
-				
-				if len(all_records) == 0 {
-					logger.Warn("Failed to derive embeddings")
-					return
 				}
 
 				records_ch <- all_records

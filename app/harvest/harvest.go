@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/sfomuseum/go-blobcache"
@@ -30,7 +31,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	}
 
 	if len(models) == 0 {
-		return fmt.Errorf("No models defined")
+		slog.Warn("No models defined")
 	}
 
 	emb_cl, err := sfom_embeddings.NewEmbedder32(ctx, embeddings_client_uri)
@@ -53,6 +54,11 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		CheckLastModTime: cache_check_lastmod,
 		Client:           http_cl,
 		BlobCache:        blob_c,
+	}
+
+	if precache {
+		slog.Warn("-precache flag set, assigning parquet output to /dev/null")
+		output = "/dev/null"
 	}
 
 	wr, err := parquet.NewWriter(ctx, output)
@@ -79,7 +85,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			case <-done_ch:
 				return
 			case <-ticker.C:
-				slog.Info("Processed rows", "count", count)
+				slog.Info("Processed rows", "count", atomic.LoadInt64(&count))
 			}
 		}
 	}()
@@ -95,12 +101,19 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		CacheOptions:     cache_opts,
 		Throttle:         throttle,
 		Models:           models,
+		PreCache:         precache,
 	}
 
 	for records, err := range harvester.Iterate(ctx, iterate_opts) {
 
 		if err != nil {
 			return fmt.Errorf("Objects iterator yielded an error, %w", err)
+		}
+
+		atomic.AddInt64(&count, 1)
+
+		if len(records) == 0 {
+			continue
 		}
 
 		_, err = wr.Write(records)
@@ -110,7 +123,6 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		}
 
 		wr.Flush()
-		count += 1
 	}
 
 	err = wr.Close()
@@ -119,5 +131,6 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		return fmt.Errorf("Failed to close after writing, %w", err)
 	}
 
+	done_ch <- true
 	return nil
 }

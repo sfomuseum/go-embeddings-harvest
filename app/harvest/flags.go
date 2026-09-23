@@ -4,7 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 )
@@ -17,17 +19,24 @@ var cache_check_lastmod bool
 var workers int
 var output string
 var verbose bool
+var precache bool
+
 var models multi.MultiCSVString
 
 func DefaultFlagSet() *flag.FlagSet {
 
 	fs := flagset.NewFlagSet("cma")
 
-	fs.StringVar(&harvester_uri, "harvester-uri", "null://", "...")
+	str_schemes := strings.Join(harvest.HarvesterSchemes(), ", ")
+	harvester_desc := fmt.Sprintf("A registered sfomuseum/go-embessings-harvest.Harvester URI. Valid options are: %s", str_schemes)
+
+	fs.StringVar(&harvester_uri, "harvester-uri", "null://", harvester_desc)
 	fs.IntVar(&workers, "workers", 5, "The number of workers to use to fetch images (and derive embeddings) concurrently")
+	fs.BoolVar(&precache, "precache", false, "Fetch images from source and store in (blob) cache without generating embeddings. If true this flag will reassign -output to /dev/null.")
+
 	fs.Var(&models, "model", "One or more models to derive embeddings for. This may also be a comma-separated list.")
 
-	fs.StringVar(&output, "output", "", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
+	fs.StringVar(&output, "output", "/dev/null", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
 	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "mobileclip://?client-uri=grpc://localhost:8080", "A registered sfomuseum/go-embeddingsdb/client.Client URI.")
 
 	fs.StringVar(&cache_uri, "cache-uri", "null://", "A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached.")
