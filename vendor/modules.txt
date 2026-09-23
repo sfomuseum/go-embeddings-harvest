@@ -839,7 +839,7 @@ github.com/sfomuseum/go-edtf
 # github.com/sfomuseum/go-embeddings v0.6.2
 ## explicit; go 1.27.1
 github.com/sfomuseum/go-embeddings
-# github.com/sfomuseum/go-embeddingsdb v0.22.0
+# github.com/sfomuseum/go-embeddingsdb v0.22.1
 ## explicit; go 1.26.6
 github.com/sfomuseum/go-embeddingsdb
 github.com/sfomuseum/go-embeddingsdb/client

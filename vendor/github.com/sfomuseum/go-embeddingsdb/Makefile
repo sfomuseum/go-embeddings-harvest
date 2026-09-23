@@ -1,11 +1,15 @@
 GOMOD=$(shell test -f "go.work" && echo "readonly" || echo "vendor")
 LDFLAGS=-s -w
+CWD=$(shell pwd)
 
-TAGS=
-EMBEDDINGS_CLIENT=mobileclip://?client-uri=grpc://localhost:8080
+vulnup:
+	go install golang.org/x/vuln/cmd/govulncheck@latest
 
 vuln:
 	govulncheck -show verbose ./...
+
+TAGS=
+EMBEDDINGS_CLIENT=mobileclip://?client-uri=grpc://localhost:8080
 
 # godoc over http is deprecated but
 # go install golang.org/x/tools/cmd/godoc@latest
