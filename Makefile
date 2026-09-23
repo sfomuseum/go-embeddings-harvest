@@ -11,7 +11,6 @@ vuln:
 
 cli:
 	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-embeddings cmd/harvest-embeddings/main.go
-	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-smithsonian-embeddings cmd/harvest-smithsonian-embeddings/main.go
 	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-sfomuseum-media-embeddings cmd/harvest-sfomuseum-media-embeddings/main.go
 	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-sfomuseum-media-collection-embeddings cmd/harvest-sfomuseum-media-collection-embeddings/main.go
 	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-sfomuseum-instagram-embeddings cmd/harvest-sfomuseum-instagram-embeddings/main.go
