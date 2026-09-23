@@ -141,8 +141,9 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 				for _, im_url := range images {
 
 					fname := filepath.Base(im_url)
-
-					depiction_id := fmt.Sprintf("%s#%s", row["accession_number"], fname)
+					ext := filepath.Ext(fname)
+					
+					depiction_id := strings.Replace(fname, ext, "", 1)
 					subject_id := row["accession_number"]
 
 					logger := slog.Default()

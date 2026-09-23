@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/client"
+	"github.com/sfomuseum/go-parquet"
 )
 
 type ImportOptions struct {
@@ -72,7 +74,7 @@ func ImportWithOptions(ctx context.Context, opts *ImportOptions, uris ...string)
 		logger := slog.Default()
 		logger = logger.With("uri", uri)
 
-		for rec, err := range Iterate(ctx, uri) {
+		for rec, err := range parquet.Iterate[embeddingsdb.Record](ctx, uri) {
 
 			if err != nil {
 				logger.Error("Iterator yielded an error", "error", err)

@@ -10,7 +10,7 @@ require (
 	github.com/sfomuseum/go-blobcache v1.1.3
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
 	github.com/sfomuseum/go-embeddings v0.6.2
-	github.com/sfomuseum/go-embeddingsdb v0.22.1
+	github.com/sfomuseum/go-embeddingsdb v0.22.2
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.19.0
 	github.com/whosonfirst/go-reader/v2 v2.1.0
@@ -153,6 +153,7 @@ require (
 	github.com/sfomuseum/go-edtf v1.3.0 // indirect
 	github.com/sfomuseum/go-encoderfile v0.0.1 // indirect
 	github.com/sfomuseum/go-mobileclip v0.1.3 // indirect
+	github.com/sfomuseum/go-parquet v0.5.0 // indirect
 	github.com/sfomuseum/iso8601duration v1.1.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.7.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect

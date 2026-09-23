@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-parquet"
 )
 
 // Statistics holds aggregated information about a collection of
@@ -137,7 +138,7 @@ func GatherStatistics(ctx context.Context, uris ...string) (*Statistics, error) 
 
 	for _, uri := range uris {
 
-		for row, err := range Iterate(ctx, uri) {
+		for row, err := range parquet.Iterate[embeddingsdb.Record](ctx, uri) {
 
 			if err != nil {
 				return nil, err
