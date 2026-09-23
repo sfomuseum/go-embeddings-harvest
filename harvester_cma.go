@@ -65,14 +65,14 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 		records_ch := make(chan []*embeddingsdb.Record)
 		err_ch := make(chan error)
 		done_ch := make(chan bool)
-		
+
 		go func() {
 
 			for {
 				select {
 				case <-ctx.Done():
 					return
-				case <- done_ch:
+				case <-done_ch:
 					return
 				case err := <-err_ch:
 
@@ -195,7 +195,7 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 				if len(all_records) > 0 {
 					records_ch <- all_records
 				}
-				
+
 				logger.Debug("Wrote embeddings for object", "count", len(all_records))
 			})
 		}

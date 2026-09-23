@@ -93,6 +93,7 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 
 		records_ch := make(chan []*embeddingsdb.Record)
 		err_ch := make(chan error)
+		done_ch := make(chan bool)
 
 		go func() {
 
@@ -103,14 +104,14 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 				case err := <-err_ch:
 
 					if !yield(nil, err) {
-						cancel()
+						done_ch <- true
 						return
 					}
 
 				case records := <-records_ch:
 
 					if !yield(records, nil) {
-						cancel()
+						done_ch <- true
 						return
 					}
 				}
@@ -198,11 +199,18 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 					return
 				}
 
-				records_ch <- records
+				if len(records) > 0 {
+					records_ch <- records
+				}
+
 				logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 			})
 
 			wg.Wait()
+
+			done_ch <- true
+			close(records_ch)
+			close(err_ch)
 		}
 	}
 }

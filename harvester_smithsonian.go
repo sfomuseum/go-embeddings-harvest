@@ -65,6 +65,7 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 
 		records_ch := make(chan []*embeddingsdb.Record)
 		err_ch := make(chan error)
+		done_ch := make(chan bool)
 
 		go func() {
 
@@ -75,14 +76,14 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 				case err := <-err_ch:
 
 					if !yield(nil, err) {
-						cancel()
+						done_ch <- true
 						return
 					}
 
 				case records := <-records_ch:
 
 					if !yield(records, nil) {
-						cancel()
+						done_ch <- true
 						return
 					}
 				}
@@ -240,7 +241,10 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 						continue
 					}
 
-					records_ch <- records
+					if len(records) > 0 {
+						records_ch <- records
+					}
+
 					logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 				}
 			})
@@ -276,6 +280,10 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 		}
 
 		wg.Wait()
+
+		done_ch <- true
+		close(records_ch)
+		close(err_ch)
 	}
 }
 
