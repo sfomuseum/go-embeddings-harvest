@@ -64,24 +64,27 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 
 		records_ch := make(chan []*embeddingsdb.Record)
 		err_ch := make(chan error)
-
+		done_ch := make(chan bool)
+		
 		go func() {
 
 			for {
 				select {
 				case <-ctx.Done():
 					return
+				case <- done_ch:
+					return
 				case err := <-err_ch:
 
 					if !yield(nil, err) {
-						cancel()
+						done_ch <- true
 						return
 					}
 
 				case records := <-records_ch:
 
 					if !yield(records, nil) {
-						cancel()
+						done_ch <- true
 						return
 					}
 				}
@@ -152,13 +155,11 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 
 					if err != nil {
 						logger.Error("Failed to retrieve image", "url", im_url, "error", err)
-						err_ch <- err
-						return
+						continue
 					}
 
 					if opts.PreCache {
-						records_ch <- all_records
-						return
+						continue
 					}
 
 					attrs := map[string]string{
@@ -191,12 +192,19 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 					all_records = append(all_records, records...)
 				}
 
-				records_ch <- all_records
+				if len(all_records) > 0 {
+					records_ch <- all_records
+				}
+				
 				logger.Debug("Wrote embeddings for object", "count", len(all_records))
 			})
 		}
 
 		wg.Wait()
+
+		done_ch <- true
+		close(records_ch)
+		close(err_ch)
 	}
 }
 
