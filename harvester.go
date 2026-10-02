@@ -1,6 +1,6 @@
+// Package harvest provides interfaces and registration mechanisms for data harvesters
+// that fetch records, cache related media, and prepare data for vector embedding derivation.
 package harvest
-
-// Work in progress. Much TBD...
 
 import (
 	"context"
@@ -16,16 +16,28 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
+// IterateOptions defines the configuration parameters and clients required
+// during the execution of a Harvester's Iterate process.
 type IterateOptions struct {
+	// EmbeddingsClient is the embedder used to generate vector embeddings for data records.
 	EmbeddingsClient embeddings.Embedder[float32]
-	CacheOptions     *http.GetWithCacheOptions
-	Throttle         chan bool
-	Models           []string
-	PreCache         bool
+	// CacheOptions configures local or remote HTTP asset caching behavior.
+	CacheOptions *http.GetWithCacheOptions
+	// Throttle acts as a concurrency limiter channel for managing API or network requests.
+	Throttle chan bool
+	// Models lists the model names/labels to be used when deriving embeddings.
+	Models []string
+	// PreCache indicates whether assets should be downloaded into the cache without embedding them.
+	PreCache bool
 }
 
+// Harvester defines the interface that individual data source harvesters must
+// implement to yield record batches and handle cleanup operations.
 type Harvester interface {
+	// Iterate returns an iterator sequence yielding chunks of structured records
+	// alongside potential processing errors.
 	Iterate(context.Context, *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error]
+	// Close releases resource handles and cleans up states managed by the harvester.
 	Close() error
 }
 
@@ -35,6 +47,7 @@ var harvester_roster roster.Roster
 // an instance of that harvester
 type HarvesterInitializationFunc func(ctx context.Context, uri string) (Harvester, error)
 
+// MustRegisterHarvester registers a harvester scheme and panics if registration fails.
 func MustRegisterHarvester(ctx context.Context, scheme string, init_func HarvesterInitializationFunc) {
 
 	err := RegisterHarvester(ctx, scheme, init_func)

@@ -22,12 +22,26 @@ func init() {
 	MustRegisterHarvester(context.Background(), "si", NewSmithsonianHarvester)
 }
 
+// SmithsonianHarvester implements the Harvester interface to parse metadata and
+// derive vector embeddings from the Smithsonian Institution's (SI) OpenAccess data release.
 type SmithsonianHarvester struct {
 	Harvester
-	units  []string
+	// units lists the specific Smithsonian institutional unit codes (e.g., nmah, nasm) to process.
+	units []string
+	// bucket holds the Go Cloud blob storage pointer where the underlying SI open data files reside.
 	bucket *blob.Bucket
 }
 
+// NewSmithsonianHarvester instantiates and returns a new Harvester for the Smithsonian dataset.
+// It expects a URI string containing query parameters to isolate units and configure the storage bucket.
+//
+// Query Modifiers:
+//   - unit: (Required) One or more Smithsonian operational unit codes.
+//   - bucket-uri: (Optional) The target source location path. If omitted, it defaults to the Smithsonian's public AWS S3 bucket.
+//
+// Example:
+//
+//	si://?unit=nmah&unit=nasm
 func NewSmithsonianHarvester(ctx context.Context, uri string) (Harvester, error) {
 
 	u, err := url.Parse(uri)
@@ -45,7 +59,7 @@ func NewSmithsonianHarvester(ctx context.Context, uri string) (Harvester, error)
 	if bucket_uri == "" {
 		bucket_uri = "si://"
 	}
-	
+
 	ctx, bucket, err := openaccess.OpenBucket(ctx, bucket_uri)
 
 	if err != nil {
@@ -60,6 +74,8 @@ func NewSmithsonianHarvester(ctx context.Context, uri string) (Harvester, error)
 	return h, nil
 }
 
+// Iterate cycles through the target collection unit scopes, reads their corresponding EDAN data objects
+// concurrently via a underlying stream bucket walker, and extracts image assets to calculate and yield records.
 func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
@@ -69,7 +85,7 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 
 		records_ch := make(chan []*embeddingsdb.Record)
 		err_ch := make(chan error)
-		done_ch := make(chan bool)
+		done_ch := make(chan bool, 1)
 
 		go func() {
 
@@ -77,17 +93,19 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 				select {
 				case <-ctx.Done():
 					return
+				case <-done_ch:
+					return
 				case err := <-err_ch:
 
 					if !yield(nil, err) {
-						done_ch <- true
+						cancel()
 						return
 					}
 
 				case records := <-records_ch:
 
 					if !yield(records, nil) {
-						done_ch <- true
+						cancel()
 						return
 					}
 				}
@@ -291,6 +309,7 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 	}
 }
 
+// Close releases the active cloud storage network bucket context managed by the SmithsonianHarvester.
 func (h *SmithsonianHarvester) Close() error {
 	return h.bucket.Close()
 }

@@ -17,17 +17,32 @@ func init() {
 	MustRegisterHarvester(context.Background(), "nga", NewNationalGalleryOfArtHarvester)
 }
 
+// ngaObjectInfo encapsulates fundamental provenance descriptors for tracking
+// and cross-referencing parent artwork datasets during secondary image iterations.
 type ngaObjectInfo struct {
-	Title      string
+	// Title represents the primary descriptive designation of the artwork.
+	Title string
+	// Creditline documents the formal acquisition or donor attribution line.
 	Creditline string
 }
 
+// NationalGalleryOfArtHarvester implements the Harvester interface to parse core object listings
+// and relational published image records from the National Gallery of Art's OpenData dataset.
 type NationalGalleryOfArtHarvester struct {
 	Harvester
+	// path_objects defines the filesystem path targeting the main NGA objects.csv file.
 	path_objects string
-	path_images  string
+	// path_images defines the filesystem path targeting the corresponding published_images.csv file.
+	path_images string
 }
 
+// NewNationalGalleryOfArtHarvester instantiates and returns a new Harvester for the
+// National Gallery of Art dataset. It requires an absolute file path mapping the objects dataset
+// and an explicit "images" query parameter mapping the location of published asset lists.
+//
+// Example:
+//
+//	nga:///usr/local/data/nga/opendata/data/objects.csv?images=/usr/local/data/nga/opendata/data/published_images.csv
 func NewNationalGalleryOfArtHarvester(ctx context.Context, uri string) (Harvester, error) {
 
 	u, err := url.Parse(uri)
@@ -41,7 +56,7 @@ func NewNationalGalleryOfArtHarvester(ctx context.Context, uri string) (Harveste
 	if !q.Has("images") {
 		return nil, fmt.Errorf("Missing ?images= parameter")
 	}
-	
+
 	h := &NationalGalleryOfArtHarvester{
 		path_objects: u.Path,
 		path_images:  q.Get("images"),
@@ -50,6 +65,10 @@ func NewNationalGalleryOfArtHarvester(ctx context.Context, uri string) (Harveste
 	return h, nil
 }
 
+// Iterate processes the NGA open data ecosystem via a two-pass workflow. First, it maps core artwork
+// traits out to a fast lookup directory on parallel threads. Next, it reads the separate published
+// images catalogue, pairs related descriptors by reference key matching, downloads media, and yields
+// chunks of mapped embeddingsdb.Record vector blocks.
 func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
@@ -99,7 +118,7 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 
 		records_ch := make(chan []*embeddingsdb.Record)
 		err_ch := make(chan error)
-		done_ch := make(chan bool)
+		done_ch := make(chan bool, 1)
 
 		go func() {
 
@@ -107,17 +126,19 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 				select {
 				case <-ctx.Done():
 					return
+				case <-done_ch:
+					return
 				case err := <-err_ch:
 
 					if !yield(nil, err) {
-						done_ch <- true
+						cancel()
 						return
 					}
 
 				case records := <-records_ch:
 
 					if !yield(records, nil) {
-						done_ch <- true
+						cancel()
 						return
 					}
 				}
@@ -211,16 +232,18 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 
 				logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 			})
-
-			wg.Wait()
-
-			done_ch <- true
-			close(records_ch)
-			close(err_ch)
 		}
+
+		wg.Wait()
+
+		done_ch <- true
+		close(records_ch)
+		close(err_ch)
 	}
 }
 
+// Close safely shuts down internal network connections or resource hooks managed
+// by the NationalGalleryOfArtHarvester. It operates as an interface-compliant no-op.
 func (h *NationalGalleryOfArtHarvester) Close() error {
 	return nil
 }

@@ -13,7 +13,6 @@ func init() {
 
 type NullHarvester struct {
 	Harvester
-	path_objects string
 }
 
 func NewNullHarvester(ctx context.Context, uri string) (Harvester, error) {

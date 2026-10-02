@@ -24,11 +24,20 @@ func init() {
 	MustRegisterHarvester(context.Background(), "cma", NewClevelandMuseumArtHarvester)
 }
 
+// ClevelandMuseumArtHarvester implements the Harvester interface to parse and derive
+// vector embeddings from the Cleveland Museum of Art's OpenAccess dataset.
 type ClevelandMuseumArtHarvester struct {
 	Harvester
 	path_objects string
 }
 
+// NewClevelandMuseumArtHarvester instantiates and returns a new Harvester for the
+// Cleveland Museum of Art dataset. It expects a URI formatted with the "cma" scheme
+// containing the absolute path to the data.csv source file.
+//
+// Example:
+//
+//	cma:///usr/local/data/cma/openaccess/data.csv
 func NewClevelandMuseumArtHarvester(ctx context.Context, uri string) (Harvester, error) {
 
 	u, err := url.Parse(uri)
@@ -44,6 +53,9 @@ func NewClevelandMuseumArtHarvester(ctx context.Context, uri string) (Harvester,
 	return h, nil
 }
 
+// Iterate parses the underlying CMA collection CSV row-by-row, resolving the primary
+// web image and any associated alternate images. It yields chunks of mapped embeddingsdb.Record
+// datasets through a functional iterator sequence.
 func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
@@ -64,7 +76,7 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 
 		records_ch := make(chan []*embeddingsdb.Record)
 		err_ch := make(chan error)
-		done_ch := make(chan bool)
+		done_ch := make(chan bool, 1)
 
 		go func() {
 
@@ -77,14 +89,14 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 				case err := <-err_ch:
 
 					if !yield(nil, err) {
-						done_ch <- true
+						cancel()
 						return
 					}
 
 				case records := <-records_ch:
 
 					if !yield(records, nil) {
-						done_ch <- true
+						cancel()
 						return
 					}
 				}
@@ -209,6 +221,8 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 	}
 }
 
+// Close gracefully closes down internal states managed by the ClevelandMuseumArtHarvester.
+// It matches the Harvester cleanup interface requirement and currently behaves as a no-op.
 func (h *ClevelandMuseumArtHarvester) Close() error {
 	return nil
 }

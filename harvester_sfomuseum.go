@@ -23,17 +23,43 @@ import (
 
 func init() {
 	MustRegisterHarvester(context.Background(), "sfomuseum", NewSFOMuseumHarvester)
-	MustRegisterHarvester(context.Background(), "sfom", NewSFOMuseumHarvester)	
+	MustRegisterHarvester(context.Background(), "sfom", NewSFOMuseumHarvester)
 }
 
+// SFOMuseumHarvester implements the Harvester interface to parse Who's On First (WOF)
+// structured repositories containing internal SFO Museum object media or social history datasets.
 type SFOMuseumHarvester struct {
 	Harvester
-	provider         string
-	iterator_uri     string
+	// provider specifies the targeted internal sub-category repo host flag.
+	provider string
+	// iterator_uri configures the driver configuration strategy used to iterate source data.
+	iterator_uri string
+	// iterator_sources defines the URIs pointing to data assets.
 	iterator_sources []string
-	parent_reader    reader.Reader
+	// parent_reader manages downstream queries fetching complementary metadata context from parent WOF elements.
+	parent_reader reader.Reader
 }
 
+// NewSFOMuseumHarvester parses a custom URI string schema to configure an instance of an SFO Museum harvester.
+// It leverages the host block to flag sub-repository types and accepts query modifiers to configure data routing.
+//
+// Valid URI structure parameters:
+//
+//	sfomuseum://{PROVIDER}?iterator-source={PATH_TO_DATA_REPO}
+//
+// Supported Provider Hosts:
+//   - sfomuseum-data-media-collection: SFO Museum Aviation collection object images.
+//   - sfomuseum-data-media: Installation overview images from physical exhibitions.
+//   - sfomuseum-data-socialmedia-instagram: Snapshot media logs from the SFO Museum Instagram history.
+//
+// Query Modifiers:
+//   - iterator-source: (Required) URIs to iterate against.
+//   - iterator-uri: (Optional) The processing strategy engine syntax (Defaults to "repo://").
+//   - parent-reader-uri: (Optional) Location of parent data endpoints (Defaults to "https://whosonfirst.org").
+//
+// Example:
+//
+//	sfomuseum://sfomuseum-data-socialmedia-instagram?iterator-source=/usr/local/data/sfomuseum-data-socialmedia-instagram
 func NewSFOMuseumHarvester(ctx context.Context, uri string) (Harvester, error) {
 
 	u, err := url.Parse(uri)
@@ -74,6 +100,9 @@ func NewSFOMuseumHarvester(ctx context.Context, uri string) (Harvester, error) {
 	return h, nil
 }
 
+// Iterate dynamically checks the specified provider configuration state and switches
+// executing processing logic to either standard collection media formatting or specialized
+// Instagram mapping sequences.
 func (h *SFOMuseumHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
@@ -104,6 +133,9 @@ func (h *SFOMuseumHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 	}
 }
 
+// iterateMedia walks classic WOF data trees, maps structured geometry paths, handles
+// nested image token resolution, looks up structural provider fallback context via secondary
+// parent read checks, and packages the results for embedding.
 func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
@@ -117,7 +149,10 @@ func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOpti
 
 		records_ch := make(chan []*embeddingsdb.Record)
 		err_ch := make(chan error)
-		done_ch := make(chan bool)
+		done_ch := make(chan bool, 1)
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
 		go func() {
 
@@ -125,17 +160,19 @@ func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOpti
 				select {
 				case <-ctx.Done():
 					return
+				case <-done_ch:
+					return
 				case err := <-err_ch:
 
 					if !yield(nil, err) {
-						done_ch <- true
+						cancel()
 						return
 					}
 
 				case records := <-records_ch:
 
 					if !yield(records, nil) {
-						done_ch <- true
+						cancel()
 						return
 					}
 				}
@@ -290,7 +327,7 @@ func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOpti
 					return
 				}
 
-				if len(records) == 0 {
+				if len(records) > 0 {
 					records_ch <- records
 				}
 
@@ -307,6 +344,9 @@ func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOpti
 	}
 }
 
+// iterateInstagram targets metadata files detailing published Instagram items, resolves
+// media keys and timing signatures, uses internal signature hashes to fetch binary images,
+// and queues up data extraction records.
 func (h *SFOMuseumHarvester) iterateInstagram(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
@@ -455,7 +495,7 @@ func (h *SFOMuseumHarvester) iterateInstagram(ctx context.Context, opts *Iterate
 					return
 				}
 
-				if len(records) == 0 {
+				if len(records) > 0 {
 					records_ch <- records
 				}
 

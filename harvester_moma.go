@@ -17,11 +17,20 @@ func init() {
 	MustRegisterHarvester(context.Background(), "moma", NewMuseumOfModernArtHarvester)
 }
 
+// MuseumOfModernArtHarvester implements the Harvester interface to parse data and
+// derive vector embeddings from the Museum of Modern Art's open collection release.
 type MuseumOfModernArtHarvester struct {
 	Harvester
 	path_objects string
 }
 
+// NewMuseumOfModernArtHarvester instantiates and returns a new Harvester configured for
+// MoMA collection processing. It requires a scheme-prefixed URI mapping the absolute file
+// location of MoMA's openaccess Artworks.csv dataset.
+//
+// Example:
+//
+//	moma:///usr/local/data/moma/collection/Artworks.csv
 func NewMuseumOfModernArtHarvester(ctx context.Context, uri string) (Harvester, error) {
 
 	u, err := url.Parse(uri)
@@ -37,6 +46,9 @@ func NewMuseumOfModernArtHarvester(ctx context.Context, uri string) (Harvester, 
 	return h, nil
 }
 
+// Iterate processes MoMA collection artwork objects sequentially by interpreting rows,
+// pulling out image records via target SHA signature keys, and yielding mapped
+// database records through an asynchronous background iterator.
 func (h *MuseumOfModernArtHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
@@ -57,7 +69,7 @@ func (h *MuseumOfModernArtHarvester) Iterate(ctx context.Context, opts *IterateO
 
 		records_ch := make(chan []*embeddingsdb.Record)
 		err_ch := make(chan error)
-		done_ch := make(chan bool)
+		done_ch := make(chan bool, 1)
 
 		go func() {
 
@@ -65,17 +77,19 @@ func (h *MuseumOfModernArtHarvester) Iterate(ctx context.Context, opts *IterateO
 				select {
 				case <-ctx.Done():
 					return
+				case <-done_ch:
+					return
 				case err := <-err_ch:
 
 					if !yield(nil, err) {
-						done_ch <- true
+						cancel()
 						return
 					}
 
 				case records := <-records_ch:
 
 					if !yield(records, nil) {
-						done_ch <- true
+						cancel()
 						return
 					}
 				}
@@ -196,6 +210,8 @@ func (h *MuseumOfModernArtHarvester) Iterate(ctx context.Context, opts *IterateO
 	}
 }
 
+// Close releases active resource pipelines managed by the MuseumOfModernArtHarvester.
+// It fulfills the abstract Harvester interface and functions as a standard no-op.
 func (h *MuseumOfModernArtHarvester) Close() error {
 	return nil
 }

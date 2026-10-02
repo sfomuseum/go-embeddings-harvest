@@ -10,15 +10,27 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
+// DeriveEmbeddingsRecordsOptions specifies the parameters, payload metadata,
+// and explicit models required to transform raw asset data into vector database records.
 type DeriveEmbeddingsRecordsOptions struct {
-	Provider    string
+	// Provider is the name or domain identifier of the data source.
+	Provider string
+	// DepictionId is the unique identifier for the specific asset representation (e.g., image ID).
 	DepictionId string
-	SubjectId   string
-	Attributes  map[string]string
-	Models      []string
-	Body        []byte
+	// SubjectId is the internal tracking identifier for the artwork or physical object.
+	SubjectId string
+	// Attributes contains structured metadata key-value properties describing the record. It is expected
+	// to conform to the `sfomuseum/go-embeddingsdb/oembeddings.OEmbeddings` model.
+	Attributes map[string]string
+	// Models maps to the individual model naming identifiers targeted for processing.
+	Models []string
+	// Body contains the raw byte array stream of the object representation (e.g., image bytes).
+	Body []byte
 }
 
+// DeriveEmbeddingsRecords coordinates the execution lifecycle to query an embedding client
+// and maps responses to records. It automatically optimizes processing strategies by adapting
+// to sequential single executions or multi-threaded concurrent routines based on model length.
 func DeriveEmbeddingsRecords(ctx context.Context, cl embeddings.Embedder[float32], opts *DeriveEmbeddingsRecordsOptions) ([]*embeddingsdb.Record, error) {
 
 	logger := slog.Default()
@@ -56,7 +68,7 @@ func DeriveEmbeddingsRecords(ctx context.Context, cl embeddings.Embedder[float32
 	default:
 
 		wg := new(sync.WaitGroup)
-		mu := new(sync.RWMutex)
+		mu := new(sync.Mutex)
 
 		for _, m := range opts.Models {
 
@@ -81,6 +93,8 @@ func DeriveEmbeddingsRecords(ctx context.Context, cl embeddings.Embedder[float32
 	return records, nil
 }
 
+// deriveEmbeddingsWithModel interacts directly with the downstream Embedder client using a single
+// specified model, verifies response validity, and packs the payload into an embeddingsdb.Record.
 func deriveEmbeddingsWithModel(ctx context.Context, cl embeddings.Embedder[float32], opts *DeriveEmbeddingsRecordsOptions, model string) (*embeddingsdb.Record, error) {
 
 	logger := slog.Default()
