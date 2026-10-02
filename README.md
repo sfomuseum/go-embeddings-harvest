@@ -122,7 +122,7 @@ $> make cli
 This tool produces a Parquet file containing rows, for a given source (a "harvester" described below), which map to the `Record` data structure described above. They have been designed to work in concert with tools like the [parquet-import](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) application which is designed to import these data files in a [sfomuseum/go-embeddingsdb](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) database server instance.
 
 ```
-> ./bin/harvest-embeddings -h
+$> ./bin/harvest-embeddings -h
 Generate Parquet file containing rows, for a given source (a "harvester"), which map to the `Record` data structure.
 Usage:
 	./bin/harvest-embeddings [options]Valid options are:
@@ -171,7 +171,7 @@ type Harvester interface {
 
 Harvesters are instantiated using the `harvest.NewHarvester(ctx, uri)` method where the details of the source data (used to create a list of iterable `*embeddingsdb.Record` records) are expected to be encoded in `uri`.
 
-#### cma://
+#### Cleveland Museum of Art 
 
 Derive embeddings for object images in the [Cleveland Museum of Art (CMA) open data release](https://github.com/ClevelandMuseumArt/openaccess). The CMA harvester expects a URI in the form of:
 
@@ -185,11 +185,11 @@ For example:
 cma:///usr/local/data/cma/openaccess/data.csv
 ```
 
-#### flickr://
+#### Flickr
 
 _Derive embeddings for images using the [Flickr API](https://www.flickr.com/services/api/). This harvester has been temporarily removed but will return shortly._
 
-#### moma://
+#### Museum of Modern Art
 
 Derive embeddings for object images in the [Museum of Modern Art (MoMA) open data release](https://github.com/MuseumofModernArt/collection). The MoMA harvester expects a URI in the form of:
 
@@ -203,7 +203,7 @@ For example:
 moma:///usr/local/data/moma/collection/Artworks.csv
 ````
 
-#### nga://
+#### National Gallery of Art
 
 Derive embeddings for object images in the [National Gallery of Art (NGA) open data release](https://github.com/NationalGalleryOfArt/opendata). The NGA harvester expects a URI in the form of:
 
@@ -217,7 +217,7 @@ For example:
 nga:///usr/local/data/nga/opendata/data/objects.csv?images=/usr/local/data/nga/opendata/data/published_images.csv
 ````
 
-#### sfomuseum://
+#### SFO Museum
 
 Derive embeddings for object images in the [SFO Museum (SFOM) opend data release](https://github.com/sfomuseum-data). The SFOM harvester expects a URI in the form of:
 
@@ -245,7 +245,7 @@ For example:
 sfomuseum://sfomuseum-data-socialmedia-instagram?iterator-source=/usr/local/data/sfomuseum-data-socialmedia-instagram
 ```
 
-#### si://
+#### Smithsonian
 
 Derive embeddings for object images in the [Smithsonian (SI) OpenAccess data release](https://github.com/Smithsonian/OpenAccess). The SI harvester expects a URI in the form of:
 
