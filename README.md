@@ -146,7 +146,7 @@ Usage:
     	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
 ```	
 
-For example, derive embeddings from the [Cleveland Museum of Art (CMA) open data release](https://github.com/ClevelandMuseumArt/openaccess) using the Google [FOO](#) model saving that data to a Parquet file called `cma-naflex.parquet`:
+For example, derive embeddings from the [Cleveland Museum of Art (CMA) open data release](https://github.com/ClevelandMuseumArt/openaccess) using the Google [https://huggingface.co/google/siglip2-base-patch16-naflex](https://huggingface.co/google/siglip2-base-patch16-naflex) model saving that data to a Parquet file called `cma-naflex.parquet`:
 
 ```
 $> ./bin/harvest-embeddings \
@@ -156,7 +156,7 @@ $> ./bin/harvest-embeddings \
 	-output work/cma-naflex.parquet	
 ```
 
-The `-harvester-uri`, `-embeddings-client-uri` and `-cache-uri` flags are discussed in the [Harvester](#), [Embedding clients](#) and [Caches](#) sections below.
+The `-harvester-uri`, `-embeddings-client-uri` and `-cache-uri` flags are discussed in the [Harvester](#harvesters), [Embeddings clients](#embeddings-client) and [Caches](#caches) sections below.
 
 #### Harvesters
 
@@ -187,7 +187,7 @@ cma:///usr/local/data/cma/openaccess/data.csv
 
 #### flickr://
 
-Derive embeddings for images using the [Flickr API](https://www.flickr.com/services/api/). This harvester has been temporarily removed but will return shortly.
+_Derive embeddings for images using the [Flickr API](https://www.flickr.com/services/api/). This harvester has been temporarily removed but will return shortly._
 
 #### moma://
 
@@ -264,9 +264,27 @@ For example:
 si://?unit=nmah&unit=nasm
 ````
 
-#### Embedding clients
+#### Embeddings clients
+
+Under the hood, harvesters use the [sfomuseum/go-embeddings](https://github.com/sfomuseum/go-embeddings) package to instantiate the "clients" that are used to generate	vector embeddings for a	source (image). Like harvesters these clients are instantiated using a URI-based syntax.
+
+In the example, above, embeddings are being generated using [the `siglip-client` embeddings client](https://github.com/sfomuseum/go-embeddings#client-server-siglip-client).
+
+There are many ways to generate vector embeddings, each with their own tradeoffs and resource constraints. To account for these differences harvesters don't make any assumptions about how embeddings are created. That decision is left up to you which, in turn, will require some additional setup. For example the `siglip-client://` embeddings client also expects [a separate HTTP service listening on port 5000](https://github.com/sfomuseum/container-siglip#endpoints) to be present and responsible for generating embeddings.
+
+It's not ideal but it's better than assuming we know what is best for you.
+
+For the complete list of embeddings client implementations please consult [the `sfomuseum/go-embeddings` documentation](https://github.com/sfomuseum/go-embeddings#implementations).
 
 #### Caches
+
+Image files that are referenced by harvester sources may be cached locally to speed up processing (for example, when generating embeddings using different models). This happens using the [sfomuseum/go-blobcache](https://github.com/sfomuseum/go-blobcache) package. This package allows images to be cached [locally or using a remote storage service](https://github.com/sfomuseum/go-blobcache#providers) (for example AWS S3).
+
+Consult [the documentation for complete details](https://github.com/sfomuseum/go-blobcache#providers) but the easiest way to use it is to simply reference a local path on disk. For example:
+
+```
+file:///usr/local/data/blobcache	
+```
 
 ## See also
 
