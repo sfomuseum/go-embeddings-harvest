@@ -300,6 +300,82 @@ Consult [the documentation for complete details](https://github.com/sfomuseum/go
 file:///usr/local/data/blobcache	
 ```
 
+## Implementing a custom harvester
+
+The easiest way to get started implementing a custom harvester is to clone and modify [the "Null" harvester](harvester_null.go). This implements the `Harvester` interface but yields no records. To implement a custom harvester you might do something like this:
+
+```
+package harvest
+
+import (
+	"context"
+	"iter"
+
+	"github.com/sfomuseum/go-embeddingsdb"
+)
+
+func init() {
+
+	// This is important. This is what enables the following to work:
+	// h, err := harvest.NewHarvester(ctx, "custom://")
+	
+	MustRegisterHarvester(context.Background(), "custom", NewCustomHarvester)
+}
+
+type CustomHarvester struct {
+	Harvester
+}
+
+func NewCustomHarvester(ctx context.Context, uri string) (Harvester, error) {
+
+	// Parse 'uri' here storing any relevant details in 'h' remembering
+	// to update the type definition for `CustomHarvester` accordingly.
+	
+	h := &CustomHarvester{}
+	return h, nil
+}
+
+func (h *CustomHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
+
+	return func(yield func([]*embeddingsdb.Record, error) bool) {
+
+		// Harvest custom data here calling yield(records, error)
+		// as necessary
+		
+		return
+	}
+}
+
+func (h *CustomHarvester) Close() error {
+	return nil
+}
+```
+
+Once you have created your harvester you can either submit it [as a PR for inclusion with this package](https://github.com/sfomuseum/go-embeddings-harvest/issues) or use it privately in your code. If you are opting for the latter (private) approach you will also need to clone the `cmd/embeddings-harvest/main.go` code in to a new tool and import your custom package. Since the "guts" of the `embeddings-harvest` tool live in the [app/harvest](app/harvest) package this process should be as easy as this:
+
+```
+package main
+
+import (
+	"context"
+	"log"
+
+	_ "github.com/custom-org/harvester/custom"
+	
+	"github.com/sfomuseum/go-embeddings-harvest/app/harvest"
+)
+
+func main() {
+
+	ctx := context.Background()
+	err := harvest.Run(ctx)
+
+	if err != nil {
+		log.Fatalf("Failed to harvest embeddings, %v", err)
+	}
+}
+```
+
 ## See also
 
 * https://github.com/sfomuseum/go-embeddings
