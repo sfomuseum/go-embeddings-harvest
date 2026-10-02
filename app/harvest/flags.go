@@ -28,7 +28,7 @@ func DefaultFlagSet() *flag.FlagSet {
 	fs := flagset.NewFlagSet("cma")
 
 	str_schemes := strings.Join(harvest.HarvesterSchemes(), ", ")
-	harvester_desc := fmt.Sprintf("A registered sfomuseum/go-embessings-harvest.Harvester URI. Valid options are: %s", str_schemes)
+	harvester_desc := fmt.Sprintf("A registered sfomuseum/go-embeddings-harvest.Harvester URI. Valid options are: %s", str_schemes)
 
 	fs.StringVar(&harvester_uri, "harvester-uri", "null://", harvester_desc)
 	fs.IntVar(&workers, "workers", 5, "The number of workers to use to fetch images (and derive embeddings) concurrently")

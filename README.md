@@ -4,7 +4,21 @@ Go package for harvesting data from a variety of providers, deriving vector embe
 
 ## Motivation
 
-The broader aim is to try and establish what the "simplest and dumbest" amount of metadata is necessary for two or more cultural heritage institutions to share vector embedding data, of their respective collections or holdings, in order to perform cross-institutional similarity queries.
+The broader aim is to try and establish what the "simplest and dumbest" amount of metadata is necessary for two or more cultural heritage institutions to share vector embedding data, of their respective collections or holdings, in order to perform cross-institutional similarity queries. Here's a picture to illustrate that idea:
+
+```
++------------------------+      +-----------------------+      +---------------------+
+
+| Raw Museum Open Data   | ---> | go-embeddings-harvest | ---> | Shared Parquet File |
+| (CMA, MoMA, NGA, etc.) |      +-----------------------+      +---------------------+
++------------------------+                  |                             |
+                                            v                             v
+                                  +-------------------+         +--------------------+
+
+                                  | Local Blob Cache  |         | go-embeddingsdb    |
+                                  | (Images / Vector) |         | Database Server    |
+                                  +-------------------+         +--------------------+
+```
 
 This package provides tools for generating those "shareable" data as Parquet files. These Parquet files encode rows which map to the `sfomuseum/go-embeddingsdb.Record` data model which looks like this:
 
@@ -117,7 +131,7 @@ go build -mod vendor -ldflags="-s -w" -o bin/harvest-embeddings cmd/harvest-embe
 $> make cli
 ```
 
-### havest-embeddings
+### harvest-embeddings
 
 This tool produces a Parquet file containing rows, for a given source (a "harvester" described below), which map to the `Record` data structure described above. They have been designed to work in concert with tools like the [parquet-import](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) application which is designed to import these data files in a [sfomuseum/go-embeddingsdb](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) database server instance.
 
@@ -133,7 +147,7 @@ Usage:
   -embeddings-client-uri string
     	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
   -harvester-uri string
-    	A registered sfomuseum/go-embessings-harvest.Harvester URI. Valid options are: cma://, moma://, nga://, null://, sfomuseum://, si:// (default "null://")
+    	A registered sfomuseum/go-embeddings-harvest.Harvester URI. Valid options are: cma://, moma://, nga://, null://, sfomuseum://, si:// (default "null://")
   -model value
     	One or more models to derive embeddings for. This may also be a comma-separated list.
   -output string
@@ -152,7 +166,7 @@ For example, derive embeddings from the [Cleveland Museum of Art (CMA) open data
 $> ./bin/harvest-embeddings \
 	-harvester-uri cma:///usr/local/data/cma/openaccess/data.csv \
 	-embeddings-client-uri 'siglip-client://?client-uri=http://localhost:5000' \	
-	-cache-uri file:///usr/local/data/blobcache/
+	-cache-uri file:///usr/local/data/blobcache/ \
 	-output work/cma-naflex.parquet	
 ```
 
@@ -160,7 +174,7 @@ The `-harvester-uri`, `-embeddings-client-uri` and `-cache-uri` flags are discus
 
 #### Harvesters
 
-Harvesters implement the `Harvester` interface to return records suitable for storing in a [sfomuseum/go-embeddingsdb](#) database instance. That interface looks like this:
+Harvesters implement the `Harvester` interface to return records suitable for storing in a [sfomuseum/go-embeddingsdb](https://github.com/sfomuseum/go-embeddingsdb) database instance. That interface looks like this:
 
 ```
 type Harvester interface {
