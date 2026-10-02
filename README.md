@@ -16,7 +16,7 @@ The broader aim is to try and establish what the "simplest and dumbest" amount o
                                   +-------------------+         +--------------------+
 
                                   | Local Blob Cache  |         | go-embeddingsdb    |
-                                  | (Images / Vector) |         | Database Server    |
+                                  |     (Images)      |         | Database Server    |
                                   +-------------------+         +--------------------+
 ```
 
@@ -305,12 +305,13 @@ file:///usr/local/data/blobcache
 The easiest way to get started implementing a custom harvester is to clone and modify [the "Null" harvester](harvester_null.go). This implements the `Harvester` interface but yields no records. To implement a custom harvester you might do something like this:
 
 ```
-package harvest
+package custom
 
 import (
 	"context"
 	"iter"
 
+	"github.com/sfomuseum/go-embeddings-harvest"	
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
@@ -319,14 +320,14 @@ func init() {
 	// This is important. This is what enables the following to work:
 	// h, err := harvest.NewHarvester(ctx, "custom://")
 	
-	MustRegisterHarvester(context.Background(), "custom", NewCustomHarvester)
+	harvest.MustRegisterHarvester(context.Background(), "custom", NewCustomHarvester)
 }
 
 type CustomHarvester struct {
-	Harvester
+	harvest.Harvester
 }
 
-func NewCustomHarvester(ctx context.Context, uri string) (Harvester, error) {
+func NewCustomHarvester(ctx context.Context, uri string) (harvest.Harvester, error) {
 
 	// Parse 'uri' here storing any relevant details in 'h' remembering
 	// to update the type definition for `CustomHarvester` accordingly.
@@ -335,7 +336,7 @@ func NewCustomHarvester(ctx context.Context, uri string) (Harvester, error) {
 	return h, nil
 }
 
-func (h *CustomHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
+func (h *CustomHarvester) Iterate(ctx context.Context, opts *harvest.IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
 
