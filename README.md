@@ -234,6 +234,7 @@ Where valid providers are:
 And valid query parameters are:
 
 | Name | Value | Required | Notes |
+| --- | --- | --- | --- |
 | `parent-reader-uri` | string  | no | A registered [whosonfirst/go-reader.Reader](https://github.com/whosonfirst/go-reader/blob/main/README.md) URI used to read data for parent records. Default is "https://data.whosonfirst.org". |
 | `iterator-uri` | string | no | A registered [whosonfirst/go-whosonfirst/v4/iterate.Iterator](https://github.com/whosonfirst/go-whosonfirst/blob/main/iterate/README.md) URI used to indicate how source data should be processed. Default "repo://". |
 | `iterator-source` | string | yes | One or more URIs referencing source data to be harvested. | 
@@ -255,6 +256,7 @@ si://?{QUERY_PARAMETERS}
 Where valid query parameters are:
 
 | Name | Value | Required | Notes |
+| --- | --- | --- | --- |
 | `bucket-uri` | string | No | This is the source of SI data to harvest [as described in `aaronland/go-smithsonian-openaccess` package](https://github.com/aaronland/go-smithsonian-openaccess#data-sources). If left empty then the harvester will harvest data from the Smithsonian's public (AWS) S3 bucket. |
 | `unit` | string | Yes | One or more Smithsonian "unit" labels . | 
 
@@ -268,13 +270,11 @@ si://?unit=nmah&unit=nasm
 
 Under the hood, harvesters use the [sfomuseum/go-embeddings](https://github.com/sfomuseum/go-embeddings) package to instantiate the "clients" that are used to generate	vector embeddings for a	source (image). Like harvesters these clients are instantiated using a URI-based syntax.
 
-In the example, above, embeddings are being generated using [the `siglip-client` embeddings client](https://github.com/sfomuseum/go-embeddings#client-server-siglip-client).
+There are many ways to generate vector embeddings, each with their own tradeoffs and resource constraints. To account for these differences harvesters don't make any assumptions about how embeddings are created. That decision is left up to you which, in turn, will require some additional setup.
 
-There are many ways to generate vector embeddings, each with their own tradeoffs and resource constraints. To account for these differences harvesters don't make any assumptions about how embeddings are created. That decision is left up to you which, in turn, will require some additional setup. For example the `siglip-client://` embeddings client also expects [a separate HTTP service listening on port 5000](https://github.com/sfomuseum/container-siglip#endpoints) to be present and responsible for generating embeddings.
-
-It's not ideal but it's better than assuming we know what is best for you.
-
-For the complete list of embeddings client implementations please consult [the `sfomuseum/go-embeddings` documentation](https://github.com/sfomuseum/go-embeddings#implementations).
+In the example, above, embeddings are being generated using [the `siglip-client://` embeddings client](https://github.com/sfomuseum/go-embeddings#client-server-siglip-client). This implementation also expects [a separate HTTP service listening on port 5000](https://github.com/sfomuseum/container-siglip#endpoints) to be present and responsible for generating embeddings. These details are not handled, in any kind of automated fashion, by code in this package.
+ 
+It's not ideal but it's better than assuming we know what is best for you. For the complete list of embeddings client implementations please consult [the `sfomuseum/go-embeddings` documentation](https://github.com/sfomuseum/go-embeddings#implementations).
 
 #### Caches
 
