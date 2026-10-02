@@ -461,7 +461,7 @@ func (h *SFOMuseumHarvester) iterateInstagram(ctx context.Context, opts *Iterate
 				logger.Debug("Wrote embeddings for instagram image", "url", im_url)
 			})
 		}
-		
+
 		wg.Wait()
 
 		done_ch <- true

@@ -32,55 +32,93 @@ func DeriveEmbeddingsRecords(ctx context.Context, cl embeddings.Embedder[float32
 
 	records := make([]*embeddingsdb.Record, 0)
 
-	wg := new(sync.WaitGroup)
-	mu := new(sync.RWMutex)
+	switch len(opts.Models) {
+	case 0:
 
-	for _, m := range opts.Models {
+		db_rec, err := deriveEmbeddingsWithModel(ctx, cl, opts, "")
 
-		wg.Go(func() {
+		if err != nil {
+			logger.Error("Failed to derive embeddings", "error", err)
+		} else {
+			records = []*embeddingsdb.Record{db_rec}
+		}
 
-			t2 := time.Now()
+	case 1:
 
-			defer func() {
-				logger.Debug("Time to derive embeddings", "model", m, "time", time.Since(t2))
-			}()
+		db_rec, err := deriveEmbeddingsWithModel(ctx, cl, opts, opts.Models[0])
 
-			emb_req := &embeddings.EmbeddingsRequest{
-				Model: m,
-				Body:  opts.Body,
-			}
+		if err != nil {
+			logger.Error("Failed to derive embeddings", "model", opts.Models[0], "error", err)
+		} else {
+			records = []*embeddingsdb.Record{db_rec}
+		}
 
-			emb_rsp, err := cl.ImageEmbeddings(ctx, emb_req)
+	default:
 
-			if err != nil {
-				logger.Error("Failed to derive embeddings", "model", m, "error", err)
-				return
-			}
+		wg := new(sync.WaitGroup)
+		mu := new(sync.RWMutex)
 
-			if len(emb_rsp.Embeddings()) == 0 {
-				logger.Error("Zero-length embeddings", "model", m, "error", err)
-				return
-			}
+		for _, m := range opts.Models {
 
-			db_rec := &embeddingsdb.Record{
-				Provider:    opts.Provider,
-				DepictionId: opts.DepictionId,
-				SubjectId:   opts.SubjectId,
-				Model:       emb_rsp.Model(),
-				Embeddings:  emb_rsp.Embeddings(),
-				Attributes:  opts.Attributes,
-				Created:     emb_rsp.Created(),
-			}
+			wg.Go(func() {
 
-			logger.Debug("Add record", "key", db_rec.Key())
+				db_rec, err := deriveEmbeddingsWithModel(ctx, cl, opts, m)
 
-			mu.Lock()
-			records = append(records, db_rec)
-			mu.Unlock()
-		})
+				if err != nil {
+					logger.Error("Failed to derive embeddings", "model", m, "error", err)
+					return
+				}
+
+				mu.Lock()
+				records = append(records, db_rec)
+				mu.Unlock()
+			})
+		}
+
+		wg.Wait()
 	}
 
-	wg.Wait()
-
 	return records, nil
+}
+
+func deriveEmbeddingsWithModel(ctx context.Context, cl embeddings.Embedder[float32], opts *DeriveEmbeddingsRecordsOptions, model string) (*embeddingsdb.Record, error) {
+
+	logger := slog.Default()
+	logger = logger.With("depiction", opts.DepictionId)
+	logger = logger.With("model", model)
+
+	t1 := time.Now()
+
+	defer func() {
+		logger.Debug("Time to derive all embeddings", "time", time.Since(t1))
+	}()
+
+	emb_req := &embeddings.EmbeddingsRequest{
+		Model: model,
+		Body:  opts.Body,
+	}
+
+	emb_rsp, err := cl.ImageEmbeddings(ctx, emb_req)
+
+	if err != nil {
+		logger.Error("Failed to derive embeddings", "error", err)
+		return nil, err
+	}
+
+	if len(emb_rsp.Embeddings()) == 0 {
+		logger.Error("Zero-length embeddings", "error", err)
+		return nil, err
+	}
+
+	db_rec := &embeddingsdb.Record{
+		Provider:    opts.Provider,
+		DepictionId: opts.DepictionId,
+		SubjectId:   opts.SubjectId,
+		Model:       emb_rsp.Model(),
+		Embeddings:  emb_rsp.Embeddings(),
+		Attributes:  opts.Attributes,
+		Created:     emb_rsp.Created(),
+	}
+
+	return db_rec, nil
 }

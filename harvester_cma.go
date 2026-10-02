@@ -142,7 +142,7 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 
 					fname := filepath.Base(im_url)
 					ext := filepath.Ext(fname)
-					
+
 					depiction_id := strings.Replace(fname, ext, "", 1)
 					subject_id := row["accession_number"]
 
