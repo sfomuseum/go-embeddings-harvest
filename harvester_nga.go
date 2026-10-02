@@ -36,9 +36,15 @@ func NewNationalGalleryOfArtHarvester(ctx context.Context, uri string) (Harveste
 		return nil, err
 	}
 
+	q := u.Query()
+
+	if !q.Has("images") {
+		return nil, fmt.Errorf("Missing ?images= parameter")
+	}
+	
 	h := &NationalGalleryOfArtHarvester{
 		path_objects: u.Path,
-		path_images:  "fixme",
+		path_images:  q.Get("images"),
 	}
 
 	return h, nil
@@ -51,7 +57,7 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 		objects_r, err := csvdict.NewReaderFromPath(h.path_objects)
 
 		if err != nil {
-			yield(nil, fmt.Errorf("Failed to create CSV reader for CMA data, %w", err))
+			yield(nil, fmt.Errorf("Failed to create CSV reader for NGA data, %w", err))
 			return
 		}
 

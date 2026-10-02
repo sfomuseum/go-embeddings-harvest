@@ -32,19 +32,80 @@ Currently this work targets vector embeddings for images of collection objects, 
 
 There are no rules, or even conventions, for how to identify "providers". A fully-qualified URL would be an obvious choice but it introduces a lot repeated boiler-plate in to the Parquet files. Maybe that doesn't matter.
 
-Likewise, there are not conventions for what should be included in the `Attributes` property which is currently defined as a freeform key-value lookup. So far the only convention has been to include a link to the image, or a thumbnail of that image, used to generate embeddings so that it is possible to useful inspect the results of a similary query against a set of embeddings. Should there be others required properties, though? For example:
+Likewise, there are not conventions for what should be included in the `Attributes` property which is currently defined as a freeform key-value lookup. The goal is the establish the _least amount of metadata_ necessary to accurately reflect provenance and to provide avenues for machine-readable metadata to be derived on a case-by-case basis.
 
-* Title?
-* A link back to an online representation of the subject (or the depiction)?
-* Perhaps a link to a IIIF manifest or some other machine-readable metadata?
-* Is it okay for multiple depictions to point back to a machine-readable document referencing the subject? Current practice rarely assumes machine-readable representations of depiction (image) assets.
-* Could Flickr-style "machine tags", with a convention-based set of known prefixes, be enough?
+The current state of this work is reflected in the [OEmbeddings - What is the least amount of metadata necessary for shared vector embeddings?](https://millsfield.sfomuseum.org/blog/2026/04/15/oembeddings/) blog post. Here are the proposed set of attributes (dubbed "OEmbeddings") as implemented by this code:
 
-The goal here is the establish the _least amount of metadata_ necessary to accurately reflect provenance and to provide avenues for machine-readable metadata to be derived on a case-by-case basis.
+<table class="table">
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Notes</th>
+</tr>
+</thead>
 
-So the purpose of this package is to provide tools to generate Parquet-encoded representations of those data for a variety of sources to help work through those questions.
+<tbody>
+<tr>
+<td><strong>type</strong></td>
+<td>string</td>
+<td>yes</td>
+<td>Either &ldquo;image&rdquo; or &ldquo;text&rdquo;.</td>
+</tr>
 
-_Eventually embeddings for text-based sources will be supported but that hasn't happened yet._
+<tr>
+<td><strong>preview</strong></td>
+<td>string</td>
+<td>yes</td>
+<td>The preview content for the vector embeddings. If <code>type</code> is &ldquo;text&rdquo; then this is expected to be a string. If <code>type</code> is &ldquo;image&rdquo; this is expected to be a string confirming to the JSON Schema &ldquo;uri&rdquo; type</td>
+</tr>
+
+<tr>
+<td><strong>depiction_url</strong></td>
+<td>uri</td>
+<td>no</td>
+<td>A web page (or resource) for the depiction used to create the vector embeddings.</td>
+</tr>
+
+<tr>
+<td><strong>subject_url</strong></td>
+<td>uri</td>
+<td>yes</td>
+<td>A web page (or resource) for the subject of the depiction used to create the vector embeddings.</td>
+</tr>
+
+<tr>
+<td><strong>subject_title</strong></td>
+<td>string</td>
+<td>yes</td>
+<td>The title of the subject of the depiction. This may be an empty string.</td>
+</tr>
+
+<tr>
+<td><strong>subject_creditline</strong></td>
+<td>string</td>
+<td>yes</td>
+<td>The creditline or attribution for the subject of the depiction. This may be an empty string.</td>
+</tr>
+
+<tr>
+<td><strong>provider_name</strong></td>
+<td>string</td>
+<td>yes</td>
+<td>The name of the provider (holder) of the subject being depicted.</td>
+</tr>
+
+<tr>
+<td><strong>provider_url</strong></td>
+<td>uri</td>
+<td>yes</td>
+<td>The primary web page for the provider (holder) of the subject being depicted.</td>
+</tr>
+</tbody>
+</table>
+
+For technical details and code implementations please consulting [the `oembeddings` documentation in `sfomuseum/go-embeddingsdb` package](https://github.com/sfomuseum/go-embeddingsdb/tree/main/oembeddings).
 
 ## Tools
 
@@ -52,310 +113,160 @@ The easiest way to get started is to run the handy `cli` Makefile target to buil
 
 ```
 $> make cli
-go build -mod vendor -ldflags="-s -w" -o bin/harvest-flickr-embeddings cmd/harvest-flickr-embeddings/main.go
-go build -mod vendor -ldflags="-s -w" -o bin/harvest-nga-embeddings cmd/harvest-nga-embeddings/main.go
-go build -mod vendor -ldflags="-s -w" -o bin/harvest-moma-embeddings cmd/harvest-moma-embeddings/main.go
-go build -mod vendor -ldflags="-s -w" -o bin/harvest-sfomuseum-media-embeddings cmd/harvest-sfomuseum-media-embeddings/main.go
-go build -mod vendor -ldflags="-s -w" -o bin/harvest-sfomuseum-instagram-embeddings cmd/harvest-sfomuseum-instagram-embeddings/main.go
+go build -mod vendor -ldflags="-s -w" -o bin/harvest-embeddings cmd/harvest-embeddings/main.go
+$> make cli
 ```
 
-Each of these tools produces a Parquet file containing rows which map to the `Record` data structure described above. They have been designed to work in concert with tools like the [parquet-import](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) application which is designed to import these data files in a [sfomuseum/go-embeddingsdb](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) database server instance.
+### havest-embeddings
 
-For example to generate data using the Flickr API and then import in to an `embeddingsdb` database you might do something like this:	
-
-```
-$> cd /usr/local/src/go-embeddings-harvest
-$> ./bin/harvest-flickr-embeddings \
-	-flickr-client-uri file:///usr/local/flickr.txt \
-	-param user_id=49487266@N07 \
-	-param method=flickr.photosets.getPhotos \
-	-param photoset_id=72157710813888403 \
-	-provider flickr-49487266@N07 \
-	-spr-path photoset.photo \
-	-model s0,s1,s2 \
-	-output flickr.parquet \
-
-$> cd /usr/local/src/go-embeddingsdb
-$> ./bin/parquet-import \
-	-client-uri grpc://localhost:8081 \
-	/usr/local/src/go-embeddings-harvest/flickr.parquet
-```
-
-### harvest-flickr-embeddings
-
-Generate Parquet-encoded embeddings from a Flickr API "standard photo response".
+This tool produces a Parquet file containing rows, for a given source (a "harvester" described below), which map to the `Record` data structure described above. They have been designed to work in concert with tools like the [parquet-import](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) application which is designed to import these data files in a [sfomuseum/go-embeddingsdb](https://github.com/sfomuseum/go-embeddingsdb?tab=readme-ov-file#parquet-import) database server instance.
 
 ```
-$> ./bin/harvest-flickr-embeddings -h
-Generate Parquet-encoded embeddings from a Flickr API "standard photo response".
+> ./bin/harvest-embeddings -h
+Generate Parquet file containing rows, for a given source (a "harvester"), which map to the `Record` data structure.
 Usage:
-	./bin/harvest-flickr-embeddings [options]Valid options are:
-  -embeddings-client-uri string
-    	A registered sfomuseum/go-embeddings.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
-  -flickr-client-uri string
-    	A gocloud/runtimevar URI which dereferences in to a valid aaronland/go-flickr-api/client.Client URI.
-  -model value
-    	One or more models to use to generate embeddings. This may also be a comma-separated string containing a list of models.
-  -output string
-    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
-  -param value
-    	Zero or more {KEY}={VALUE} parameters to query the Flickr API with.
-  -provider string
-    	The name of the provider to assign to each embeddings record. (default "flickr")
-  -spr-path string
-    	The path to the list of photos in the Flickr API response. Paths should be described using tidwall/gjson "dot" notation.
-  -verbose
-    	Enable verbose (debug) logging.
-```
-
-For example, to derive embeddings from the San Diego Air and Space Museum's [California's Aviation Heritage](https://flickr.com/photos/sdasmarchives/albums/72157710813888403/) photoset:
-
-```
-./bin/harvest-flickr-embeddings \
-	-flickr-client-uri file:///usr/local/flickr.txt \
-	-param user_id=49487266@N07 \
-	-param method=flickr.photosets.getPhotos \
-	-param photoset_id=72157710813888403 \
-	-provider flickr-49487266@N07 \
-	-spr-path photoset.photo \
-	-model s0,s1,s2 \
-	-output flickr.parquet \
-	-verbose	
-```
-
-#### Flickr Standard Photos Response (`-spr-path`)
-
-The [Standard Photos Response, APIs for a civilized age](https://code.flickr.net/2008/08/19/standard-photos-response-apis-for-civilized-age/) blog post from Flickr describes the standard photos response (SPR) this way:
-
-> The standard photos response is a data structure that we use when we want to return a list of photos. Most prominently the ever popular swiss-army-API flickr.photos.search() uses it, but also methods like flickr.favorites.getList() or flickr.groups.pools.getPhotos().
-
-The `harvest-flickr-embeddings` tool is designed to derive embeddings for any Flickr API method that returns an SPR-encoded list of photos. You will need to consult the [Flickr API documentation](https://www.flickr.com/api) to determine the (JSON) query path where photos are stored (it varies from API method to API method).
-
-For example to retrieve photos from the [Airports – SFO](https://flickr.com/groups/airports-sfo/) group with permissive licensing (CreativeCommons or "no known copyright") you might do something like this:
-
-```
-$> ./bin/harvest-flickr-embeddings \
-	-param group_id=95693046@N00 \
-	-param method=flickr.photos.search \
-	-param license=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
-	-spr-path photos.photo \
-	-flickr-client-uri file:///usr/local/flickr.txt \
-	-verbose \
-	-output flickr-sfo.parquet \
-	-model s0,s1,s2
-```
-
-#### Flickr API client credentials URIs (`-flickr-client-uri`)
-
-Under the hood this tool uses the [aaronland/go-flickr-api](https://github.com/aaronland/go-flickr-api) package to communicate with the Flickr API. The nature of the Flickr API means that you need to provide a long credentials URI like this:
-
-```
-oauth1://?consumer_key={KEY}&consumer_secret={SECRET}&oauth_token={TOKEN}&oauth_token_secret={SECRET}
-```
-
-_This_ package uses the [gocloud.dev/runtimevar](https://gocloud.dev/howto/runtimevar/) package to read those long-twisty URIs from a variety of sources. For the purposes of getting start the easiest thing is to put your `go-flickr-api` credentials URI in a local file and then refer to it as `file://path/to/file-containing-credentials`.
-
-#### See also
-
-* https://www.flickr.com/services/api/
-* https://github.com/aaronland/go-flickr-api
-
-### harvest-nga-embeddings
-
-Generate Parquet-encoded embeddings from the National Gallery of Art (NGA) open data release.
-
-```
-$> ./bin/harvest-nga-embeddings -h
-Generate Parquet-encoded embeddings from the National Gallery of Art (NGA) open data release.
-Usage:
-	./bin/harvest-nga-embeddings [options]Valid options are:
-  -embeddings-client-uri string
-    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
-  -model value
-    	One or more models to derive embeddings for. This may also be a comma-separated list.
-  -objects string
-    	The path to the 'objects.csv' file contained in the NationalGalleryOfArt/opendata GitHub repository.
-  -output string
-    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
-  -published-images string
-    	The path to the 'published_images.csv' file contained in the NationalGalleryOfArt/opendata GitHub repository.
-  -verbose
-    	Enable verbose (debug) logging.
-  -workers int
-    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
-```
-
-For example:
-
-```
-$> ./bin/harvest-nga-embeddings \
-	-output nga.parquet \
-	-published-images /usr/local/src/opendata/data/published_images.csv \
-	-model s0,s1,s2
-```
-
-#### See also
-
-* https://github.com/NationalGalleryOfArt/opendata
-
-### harvest-moma-embeddings
-
-Generate Parquet-encoded embeddings from the Museum of Modern Art (MoMA) open data release.
-
-```
-$> ./bin/harvest-moma-embeddings -h
-Generate Parquet-encoded embeddings from the Museum of Modern Art (MoMA) open data release.
-Usage:
-	./bin/harvest-moma-embeddings [options]Valid options are:
-  -artworks string
-    	The path to the 'Artworks.csv' file contained in the MuseumofModernArt/collection GitHub repository.
-  -embeddings-client-uri string
-    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
-  -model value
-    	One or more models to derive embeddings for. This may also be a comma-separated list.
-  -output string
-    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
-  -verbose
-    	Enable verbose (debug) logging.
-  -workers int
-    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
-``` 
-
-For example:
-
-```
-$> ./bin/harvest-moma-embeddings \
-	-output moma.parquet \
-	-published-images /usr/local/src/moma/collection/Artworks.csv \
-	-model s0,s1,s2
-```
-
-#### See also
-
-* https://github.com/MuseumofModernArt/collection/
-
-### harvest-sfomuseum-instagram-embeddings
-
-Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-socialmedia-instagram data repositories (aka "Instragram photos").
-
-```
-$> ./bin/harvest-sfomuseum-instagram-embeddings -h
-Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-socialmedia-instagram data repositories (aka "Instragram photos").
-Usage:
-	./bin/harvest-sfomuseum-instagram-embeddings [options]Valid options are:
-  -embeddings-client-uri string
-    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
-  -iterator-source string
-    	The source for the go-whosonfirst-iterate/v3.Iterator instance to process. (default "/usr/local/data/sfomuseum-data-socialmedia-instagram")
-  -iterator-uri string
-    	A registered go-whosonfirst-iterate/v3.Iterator URI. (default "repo://?exclude=properties.edtf:deprecated=.*")
-  -model value
-    	One or more models to derive embeddings for. This may also be a comma-separated list.
-  -output string
-    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
-  -verbose
-    	Enable verbose (debug) logging.
-  -workers int
-    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
-```
-
-#### See also
-
-* https://github.com/sfomuseum-data/sfomuseum-data-socialmedia-instagram/
-
-### harvest-sfomuseum-media-embeddings
-
-Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media data repository.
-
-```
-$> ./bin/harvest-sfomuseum-media-embeddings -h
-Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media data repository.
-Usage:
-	./bin/harvest-sfomuseum-media-embeddings [options]Valid options are:
-  -embeddings-client-uri string
-    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
-  -iterator-source string
-    	The source for the go-whosonfirst-iterate/v3.Iterator instance to process. (default "/usr/local/data/sfomuseum-data-media")
-  -iterator-uri string
-    	A registered go-whosonfirst-iterate/v3.Iterator URI. (default "repo://?exclude=properties.edtf:deprecated=.*")
-  -model value
-    	One or more models to derive embeddings for. This may also be a comma-separated list.
-  -output string
-    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
-  -verbose
-    	Enable verbose (debug) logging.
-  -workers int
-    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
-```
-
-#### See also
-
-* https://github.com/sfomuseum-data/sfomuseum-data-media
-
-### harvest-sfomuseum-media-collection-embeddings
-
-Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media-collection data repository.
-
-```
-$> ./bin/harvest-sfomuseum-media-collection-embeddings -h
-Generate Parquet-encoded embeddings from SFO Museum sfomuseum-data-media-collection data repository.
-Usage:
-	./bin/harvest-sfomuseum-media-collection-embeddings [options]Valid options are:
-  -embeddings-client-uri string
-    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
-  -iterator-source string
-    	The source for the go-whosonfirst-iterate/v3.Iterator instance to process. (default "/usr/local/data/sfomuseum-data-media-collection")
-  -iterator-uri string
-    	A registered go-whosonfirst-iterate/v3.Iterator URI. (default "repo://?exclude=properties.edtf:deprecated=.*")
-  -model value
-    	One or more models to derive embeddings for. This may also be a comma-separated list.
-  -output string
-    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
-  -parent-reader-uri string
-    	... (default "repo:///usr/local/data/sfomuseum-data-collection")
-  -verbose
-    	Enable verbose (debug) logging.
-  -workers int
-    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
-```
-
-#### See also
-
-* https://github.com/sfomuseum-data/sfomuseum-data-media-collection
-
-### harvest-smithsonain-embeddings
-
-Generate Parquet-encoded embeddings from the Smithsonian (SI) open data release.
-
-```
-$> ./bin/harvest-smithsonian-embeddings -h
-Generate Parquet-encoded embeddings from the Smithsonian (SI) open data release.
-Usage:
-	./bin/harvest-smithsonian-embeddings [options]Valid options are:
-  -bucket-uri string
-    	A valid GoCloud bucket URI. Valid schemes are: file://, s3:// and si:// which is signals that data should be retrieved from the Smithsonian's 'smithsonian-open-access' S3 bucket. (default "si://")
+	./bin/harvest-embeddings [options]Valid options are:
   -cache-check-lastmod
     	A boolean value to indicate whether the last modified date of an object to harvest should be compared against the local cache.
   -cache-uri string
     	A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached. (default "null://")
   -embeddings-client-uri string
     	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
+  -harvester-uri string
+    	A registered sfomuseum/go-embessings-harvest.Harvester URI. Valid options are: cma://, moma://, nga://, null://, sfomuseum://, si:// (default "null://")
   -model value
     	One or more models to derive embeddings for. This may also be a comma-separated list.
   -output string
-    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT.
-  -unit value
-    	The Smithsonian "unit" code to generate embeddings for (for example: nmah, nasm, saam, etc.).
+    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "/dev/null")
+  -precache
+    	Fetch images from source and store in (blob) cache without generating embeddings. If true this flag will reassign -output to /dev/null.
   -verbose
     	Enable verbose (debug) logging.
   -workers int
     	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
+```	
+
+For example, derive embeddings from the [Cleveland Museum of Art (CMA) open data release](https://github.com/ClevelandMuseumArt/openaccess) using the Google [FOO](#) model saving that data to a Parquet file called `cma-naflex.parquet`:
+
+```
+$> ./bin/harvest-embeddings \
+	-harvester-uri cma:///usr/local/data/cma/openaccess/data.csv \
+	-embeddings-client-uri 'siglip-client://?client-uri=http://localhost:5000' \	
+	-cache-uri file:///usr/local/data/blobcache/
+	-output work/cma-naflex.parquet	
 ```
 
-#### See also
+The `-harvester-uri`, `-embeddings-client-uri` and `-cache-uri` flags are discussed in the [Harvester](#), [Embedding clients](#) and [Caches](#) sections below.
 
-* https://registry.opendata.aws/smithsonian-open-access/
-* https://github.com/aaronland/go-smithsonian-openaccess
+#### Harvesters
+
+Harvesters implement the `Harvester` interface to return records suitable for storing in a [sfomuseum/go-embeddingsdb](#) database instance. That interface looks like this:
+
+```
+type Harvester interface {
+	Iterate(context.Context, *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error]
+	Close() error
+}
+```
+
+Harvesters are instantiated using the `harvest.NewHarvester(ctx, uri)` method where the details of the source data (used to create a list of iterable `*embeddingsdb.Record` records) are expected to be encoded in `uri`.
+
+#### cma://
+
+Derive embeddings for object images in the [Cleveland Museum of Art (CMA) open data release](https://github.com/ClevelandMuseumArt/openaccess). The CMA harvester expects a URI in the form of:
+
+```
+cma://{PATH_TO_OPENACCESS_DATA.CSV}
+```
+
+For example:
+
+```
+cma:///usr/local/data/cma/openaccess/data.csv
+```
+
+#### flickr://
+
+Derive embeddings for images using the [Flickr API](https://www.flickr.com/services/api/). This harvester has been temporarily removed but will return shortly.
+
+#### moma://
+
+Derive embeddings for object images in the [Museum of Modern Art (MoMA) open data release](https://github.com/MuseumofModernArt/collection). The MoMA harvester expects a URI in the form of:
+
+```
+moma://{PATH_TO_COLLECTION_ARTWORKS.CSV}
+```
+
+For example:
+
+```
+moma:///usr/local/data/moma/collection/Artworks.csv
+````
+
+#### nga://
+
+Derive embeddings for object images in the [National Gallery of Art (NGA) open data release](https://github.com/NationalGalleryOfArt/opendata). The NGA harvester expects a URI in the form of:
+
+```
+nga://{PATH_TO_OPENDATA_OBJECTS.CSV}?images={PATH_TO_OPENDATA_IMAGES.CSV}
+```
+
+For example:
+
+```
+nga:///usr/local/data/nga/opendata/data/objects.csv?images=/usr/local/data/nga/opendata/data/published_images.csv
+````
+
+#### sfomuseum://
+
+Derive embeddings for object images in the [SFO Museum (SFOM) opend data release](https://github.com/sfomuseum-data). The SFOM harvester expects a URI in the form of:
+
+```
+sfomuseum://{PROVIDER}?{QUERY_PARAMETERS}
+```
+
+Where valid providers are:
+
+* `sfomuseum-data-media-collection` - Harvest data from the [sfomuseum-data/sfomuseum-data-media-collection](https://github.com/sfomuseum-data/sfomuseum-data-media-collection) repository containing object images from the SFO Museum Aviation collection.
+* `sfomuseum-data-media` - Harvest data from the [sfomuseum-data/sfomuseum-data-media](https://github.com/sfomuseum-data/sfomuseum-data-media) repository containing installation images from SFO Museum exhibitions.
+* `sfomuseum-data-socialmedia-instagram` - Harvest data from the [sfomuseum-data/sfomuseum-data-socialmedia-instagram](https://github.com/sfomuseum-data/sfomuseum-data-socialmedia-instagram) repository containing images from the SFO Museum Instagram account.
+
+And valid query parameters are:
+
+| Name | Value | Required | Notes |
+| `parent-reader-uri` | string  | no | A registered [whosonfirst/go-reader.Reader](https://github.com/whosonfirst/go-reader/blob/main/README.md) URI used to read data for parent records. Default is "https://data.whosonfirst.org". |
+| `iterator-uri` | string | no | A registered [whosonfirst/go-whosonfirst/v4/iterate.Iterator](https://github.com/whosonfirst/go-whosonfirst/blob/main/iterate/README.md) URI used to indicate how source data should be processed. Default "repo://". |
+| `iterator-source` | string | yes | One or more URIs referencing source data to be harvested. | 
+
+For example:
+
+```
+sfomuseum://sfomuseum-data-socialmedia-instagram?iterator-source=/usr/local/data/sfomuseum-data-socialmedia-instagram
+```
+
+#### si://
+
+Derive embeddings for object images in the [Smithsonian (SI) OpenAccess data release](https://github.com/Smithsonian/OpenAccess). The SI harvester expects a URI in the form of:
+
+```
+si://?{QUERY_PARAMETERS}
+```
+
+Where valid query parameters are:
+
+| Name | Value | Required | Notes |
+| `bucket-uri` | string | No | This is the source of SI data to harvest [as described in `aaronland/go-smithsonian-openaccess` package](https://github.com/aaronland/go-smithsonian-openaccess#data-sources). If left empty then the harvester will harvest data from the Smithsonian's public (AWS) S3 bucket. |
+| `unit` | string | Yes | One or more Smithsonian "unit" labels . | 
+
+For example:
+
+```
+si://?unit=nmah&unit=nasm
+````
+
+#### Embedding clients
+
+#### Caches
 
 ## See also
 

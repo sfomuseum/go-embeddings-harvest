@@ -45,7 +45,7 @@ func DefaultFlagSet() *flag.FlagSet {
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Generate Parquet-encoded embeddings from the Cleveland Museum of Art (CMA) open data release.\n")
+		fmt.Fprintf(os.Stderr, "Generate Parquet file containing rows, for a given source (a \"harvester\"), which map to the `Record` data structure.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()

@@ -42,6 +42,10 @@ func NewSmithsonianHarvester(ctx context.Context, uri string) (Harvester, error)
 
 	bucket_uri := q.Get("bucket-uri")
 
+	if bucket_uri == "" {
+		bucket_uri = "si://"
+	}
+	
 	ctx, bucket, err := openaccess.OpenBucket(ctx, bucket_uri)
 
 	if err != nil {

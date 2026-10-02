@@ -23,6 +23,7 @@ import (
 
 func init() {
 	MustRegisterHarvester(context.Background(), "sfomuseum", NewSFOMuseumHarvester)
+	MustRegisterHarvester(context.Background(), "sfom", NewSFOMuseumHarvester)	
 }
 
 type SFOMuseumHarvester struct {
