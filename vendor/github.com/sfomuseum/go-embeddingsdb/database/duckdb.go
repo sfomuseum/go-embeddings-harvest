@@ -1,4 +1,4 @@
-//go:build !no_duckdb
+//go:build duckdb
 
 package database
 
@@ -260,6 +260,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 	max_distance := options.GetMaxDistanceFromOptions(ctx, opts...)
 	max_results := options.GetMaxResultsFromOptions(ctx, opts...)
+
 	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
 
 	if max_results == nil {
@@ -309,7 +310,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, attributes, array_distance(vec, ?::FLOAT[%d]) AS distance
 			  FROM embeddings WHERE %s ORDER BY distance ASC LIMIT %d`,
-		db.dimensions, str_conditions, max_results)
+		db.dimensions, str_conditions, *max_results)
 
 	slog.Debug("Query similar", "query", q, "distance", max_distance)
 

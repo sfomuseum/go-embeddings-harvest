@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-parquet"
 )
 
 // To do: Add filtering mechanism
@@ -23,7 +24,7 @@ func Merge(ctx context.Context, wr *ParquetWriter, uris ...string) (int64, error
 
 		count := int64(0)
 
-		for row, err := range Iterate(ctx, uri) {
+		for row, err := range parquet.Iterate[embeddingsdb.Record](ctx, uri) {
 
 			if err != nil {
 				logger.Error("Iterator yielded an error", "uri", uri, "error", err)

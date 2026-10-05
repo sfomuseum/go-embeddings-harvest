@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/client"
+	"github.com/sfomuseum/go-parquet"
 )
 
 type ImportOptions struct {
@@ -53,6 +55,7 @@ func ImportWithOptions(ctx context.Context, opts *ImportOptions, uris ...string)
 
 	}()
 
+	seen := new(sync.Map)
 	wg := new(sync.WaitGroup)
 
 	throttle := make(chan bool, opts.Workers)
@@ -71,7 +74,7 @@ func ImportWithOptions(ctx context.Context, opts *ImportOptions, uris ...string)
 		logger := slog.Default()
 		logger = logger.With("uri", uri)
 
-		for rec, err := range Iterate(ctx, uri) {
+		for rec, err := range parquet.Iterate[embeddingsdb.Record](ctx, uri) {
 
 			if err != nil {
 				logger.Error("Iterator yielded an error", "error", err)
@@ -100,6 +103,14 @@ func ImportWithOptions(ctx context.Context, opts *ImportOptions, uris ...string)
 					defer func() {
 						throttle <- true
 					}()
+
+					key := rec.Key()
+					_, ok := seen.LoadOrStore(key, true)
+
+					if ok {
+						logger.Warn("Record already indexed, skipping", "key", key)
+						return
+					}
 
 					err := opts.Client.AddRecord(ctx, rec)
 

@@ -81,11 +81,7 @@ func EmbeddingsForFlickrSPRReader(ctx context.Context, emb_opts *EmbeddingsForFl
 // EmbeddingsForFlickrSPRArray derives embeddings for a list of Flickr SPR results encoded in a [gjson.Result].
 func EmbeddingsForFlickrSPRArray(ctx context.Context, opts *EmbeddingsForFlickrSPROptions, photos_rsp gjson.Result) error {
 
-	workers := 1
-
-	if opts.Workers > 1 {
-		workers = opts.Workers
-	}
+	workers := max(opts.Workers, 1)
 
 	wg := new(sync.WaitGroup)
 	throttle := make(chan bool, workers)

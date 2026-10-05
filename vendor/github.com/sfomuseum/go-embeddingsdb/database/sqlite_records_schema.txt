@@ -1,6 +1,6 @@
 {{ define "sqlite_records" -}}
 CREATE TABLE {{ .TableName  }} (
-       id INTEGER PRIMARY KEY,
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
        provider TEXT,
        depiction_id TEXT,
        subject_id TEXT,

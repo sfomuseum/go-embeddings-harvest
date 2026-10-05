@@ -1,10 +1,15 @@
 GOMOD=$(shell test -f "go.work" && echo "readonly" || echo "vendor")
 LDFLAGS=-s -w
+CWD=$(shell pwd)
 
-TAGS=
+vulnup:
+	go install golang.org/x/vuln/cmd/govulncheck@latest
 
 vuln:
 	govulncheck -show verbose ./...
+
+TAGS=
+EMBEDDINGS_CLIENT=mobileclip://?client-uri=grpc://localhost:8080
 
 # godoc over http is deprecated but
 # go install golang.org/x/tools/cmd/godoc@latest
@@ -12,11 +17,14 @@ vuln:
 godoc:
 	godoc -http=:6060
 
+build:
+	go build -tags duckdb ./...
+
 test:
-	go test -tags sqlite,vectors,bleve -ldflags="$(LDFLAGS) -r /usr/local/lib" -v ./...
+	go test -tags duckdb -ldflags="$(LDFLAGS) -r /usr/local/lib" -v ./...
 
 fix:
-	go fix -tags sqlite,vectors,bleve -ldflags="$(LDFLAGS) -r /usr/local/lib" ./...
+	go fix -tags duckdb -ldflags="$(LDFLAGS) -r /usr/local/lib" ./...
 
 cli:
 	@make cli-server
@@ -58,8 +66,8 @@ inspector:
 		cmd/inspector/main.go \
 		-verbose \
 		-client-uri 'grpc://localhost:8081' \
-		-enable-uploads \
-		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
+		-enable-search \
+		-embeddings-client-uri "$(EMBEDDINGS_CLIENT)" \
 		-server-uri http://localhost:8082
 
 lambda-inspector:
@@ -71,7 +79,7 @@ lambda-inspector:
 
 
 server-bundle:
-	CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" go build -tags=bleve,vectors,duckdb,duckdb_use_static_lib -mod $(GOMOD) -ldflags="$(LDFLAGS) -r /usr/local/lib" -o bin/embeddingsdb-server cmd/server/main.go
+	CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" go build -tags=duckdb,duckdb_use_static_lib -mod $(GOMOD) -ldflags="$(LDFLAGS) -r /usr/local/lib" -o bin/embeddingsdb-server cmd/server/main.go
 
 # https://developers.google.com/protocol-buffers/docs/reference/go-generated
 # go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
