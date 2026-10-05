@@ -79,13 +79,15 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
+	t1 := time.Now()
+
 	go func() {
 		for {
 			select {
 			case <-done_ch:
 				return
 			case <-ticker.C:
-				slog.Info("Processed rows", "count", atomic.LoadInt64(&count))
+				slog.Info("Processed rows", "count", atomic.LoadInt64(&count), "time", time.Since(t1))
 			}
 		}
 	}()

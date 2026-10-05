@@ -74,35 +74,11 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		records_ch := make(chan []*embeddingsdb.Record)
-		err_ch := make(chan error)
-		done_ch := make(chan bool, 1)
-
-		go func() {
-
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-done_ch:
-					return
-				case err := <-err_ch:
-
-					if !yield(nil, err) {
-						cancel()
-						return
-					}
-
-				case records := <-records_ch:
-
-					if !yield(records, nil) {
-						cancel()
-						return
-					}
-				}
-			}
-		}()
-
+		// This is what we use to process records concurrently, capturing and
+		// yielding records without spilling outside of the main loop which causes
+		// all kinds of iterator/yield pain.
+		
+		buffer := NewBuffer[*embeddingsdb.Record](1000, yield)
 		wg := new(sync.WaitGroup)
 
 		for row, err := range objects_r.Iterate() {
@@ -129,6 +105,9 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 					return
 				}
 
+				logger := slog.Default()
+				logger = logger.With("object", row["accession_number"])
+
 				images := []string{
 					row["image_web"],
 				}
@@ -142,11 +121,6 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 						images = append(images, im.String())
 					}
 				}
-
-				logger := slog.Default()
-				logger = logger.With("object", row["accession_number"])
-
-				all_records := make([]*embeddingsdb.Record, 0)
 
 				logger.Debug("Process images for object", "count", len(images))
 
@@ -197,27 +171,28 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 					records, err := DeriveEmbeddingsRecords(ctx, opts.EmbeddingsClient, derive_opts)
 
 					if err != nil {
-						logger.Error("Failed to derive embeddings records", "error", err)
-						err_ch <- err
-						return
+						logger.Error("Failed to derive embeddings", "error", err)
+						continue
 					}
 
-					all_records = append(all_records, records...)
+					if len(records) > 0 {
+
+						if !buffer.Append(records...) {
+							logger.Error("Appending and flushing records returned false")
+							return
+						}
+					}
 				}
 
-				if len(all_records) > 0 {
-					records_ch <- all_records
-				}
-
-				logger.Debug("Wrote embeddings for object", "count", len(all_records))
 			})
+
+			if !buffer.Flush() {
+				slog.Error("Flushing remaining records returned false")
+				return
+			}
 		}
 
 		wg.Wait()
-
-		done_ch <- true
-		close(records_ch)
-		close(err_ch)
 	}
 }
 
