@@ -83,34 +83,12 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		records_ch := make(chan []*embeddingsdb.Record)
-		err_ch := make(chan error)
-		done_ch := make(chan bool, 1)
+		buffer := NewBuffer[*embeddingsdb.Record](100)
+		defer buffer.Close()
 
-		go func() {
-
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-done_ch:
-					return
-				case err := <-err_ch:
-
-					if !yield(nil, err) {
-						cancel()
-						return
-					}
-
-				case records := <-records_ch:
-
-					if !yield(records, nil) {
-						cancel()
-						return
-					}
-				}
-			}
-		}()
+		if opts.Verbose {
+			buffer.StartStatsTicker()
+		}
 
 		wg := new(sync.WaitGroup)
 
@@ -232,7 +210,6 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 
 					if err != nil {
 						logger.Error("Failed to retrieve image", "url", im_url, "error", err)
-						err_ch <- err
 						continue
 					}
 
@@ -259,17 +236,23 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 
 					if err != nil {
 						logger.Error("Failed to derive embeddings records", "error", err)
-						err_ch <- err
 						continue
 					}
 
 					if len(records) > 0 {
-						records_ch <- records
+						buffer.Append(records...)
 					}
 
 					logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 				}
 			})
+
+			if records := buffer.CollectAndReset(false); records != nil {
+				if !yield(records, nil) {
+					cancel()
+					return nil
+				}
+			}
 
 			return nil
 		}
@@ -297,15 +280,19 @@ func (h *SmithsonianHarvester) Iterate(ctx context.Context, opts *IterateOptions
 			err := walk.WalkBucket(ctx, opts, b)
 
 			if err != nil {
-				err_ch <- err
+				yield(nil, fmt.Errorf("Failed to walk bucket for unit '%s', %v", unit, err))
+				return
 			}
 		}
 
 		wg.Wait()
 
-		done_ch <- true
-		close(records_ch)
-		close(err_ch)
+		if records := buffer.CollectAndReset(true); records != nil {
+			if !yield(records, nil) {
+				cancel()
+				return
+			}
+		}
 	}
 }
 

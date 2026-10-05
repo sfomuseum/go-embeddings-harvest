@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"maps"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -77,11 +78,17 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 		// This is what we use to process records concurrently, capturing and
 		// yielding records without spilling outside of the main loop which causes
 		// all kinds of iterator/yield pain.
-		
-		buffer := NewBuffer[*embeddingsdb.Record](1000, yield)
+
+		buffer := NewBuffer[*embeddingsdb.Record](100)
+		defer buffer.Close()
+
+		if opts.Verbose {
+			buffer.StartStatsTicker()
+		}
+
 		wg := new(sync.WaitGroup)
 
-		for row, err := range objects_r.Iterate() {
+		for iter_row, err := range objects_r.Iterate() {
 
 			select {
 			case <-ctx.Done():
@@ -94,6 +101,8 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 			}
 
 			<-opts.Throttle
+
+			row := maps.Clone(iter_row)
 
 			wg.Go(func() {
 
@@ -176,23 +185,27 @@ func (h *ClevelandMuseumArtHarvester) Iterate(ctx context.Context, opts *Iterate
 					}
 
 					if len(records) > 0 {
-
-						if !buffer.Append(records...) {
-							logger.Error("Appending and flushing records returned false")
-							return
-						}
+						buffer.Append(records...)
 					}
 				}
-
 			})
 
-			if !buffer.Flush() {
-				slog.Error("Flushing remaining records returned false")
-				return
+			if records := buffer.CollectAndReset(false); records != nil {
+				if !yield(records, nil) {
+					cancel()
+					return
+				}
 			}
 		}
 
 		wg.Wait()
+
+		if records := buffer.CollectAndReset(true); records != nil {
+			if !yield(records, nil) {
+				cancel()
+				return
+			}
+		}
 	}
 }
 

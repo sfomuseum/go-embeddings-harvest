@@ -87,7 +87,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			case <-done_ch:
 				return
 			case <-ticker.C:
-				slog.Info("Processed rows", "count", atomic.LoadInt64(&count), "time", time.Since(t1))
+				slog.Info("Harvested rows", "count", atomic.LoadInt64(&count), "time", time.Since(t1))
 			}
 		}
 	}()
@@ -104,6 +104,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		Throttle:         throttle,
 		Models:           models,
 		PreCache:         precache,
+		Verbose:          verbose,
 	}
 
 	for records, err := range harvester.Iterate(ctx, iterate_opts) {
@@ -112,11 +113,13 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			return fmt.Errorf("Objects iterator yielded an error, %w", err)
 		}
 
-		atomic.AddInt64(&count, 1)
+		count_records := len(records)
 
-		if len(records) == 0 {
+		if count_records == 0 {
 			continue
 		}
+
+		atomic.AddInt64(&count, int64(count_records))
 
 		_, err = wr.Write(records)
 
@@ -132,6 +135,8 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	if err != nil {
 		return fmt.Errorf("Failed to close after writing, %w", err)
 	}
+
+	slog.Info("Harvesting complete", "total", atomic.LoadInt64(&count), "time", time.Since(t1))
 
 	done_ch <- true
 	return nil

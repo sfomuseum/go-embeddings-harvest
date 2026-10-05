@@ -1,67 +1,92 @@
 package harvest
 
 import (
+	"log/slog"
 	"sync"
+	"time"
 )
 
 // Buffer manages thread-safe chunking and buffering of records
 // for sequential processing or streaming iteration pipelines.
 type Buffer[T any] struct {
-	mu    sync.RWMutex
-	yield func([]T, error) bool
-	items []T
-	size  int
+	mu     sync.RWMutex
+	items  []T
+	size   int64
+	seen   int64
+	ticker *time.Ticker
 }
 
 // NewBuffer instantiates a new thread-safe chunked accumulator.
-func NewBuffer[T any](size int, yield func([]T, error) bool) *Buffer[T] {
+func NewBuffer[T any](size int64) *Buffer[T] {
 	return &Buffer[T]{
 		items: make([]T, 0, size),
-		yield: yield,
 		size:  size,
 	}
 }
 
-func (b *Buffer[T]) AppendAndFlush(items ...T) bool {
-
-	b.Append(items...)
-
-	if len(b.items) < b.size {
-		return true
-	}
-
-	return b.Flush()
-}
-
 // Append safely pushes items to the internal queue using write-lock protection boundaries.
-func (b *Buffer[T]) Append(items ...T) bool {
+func (b *Buffer[T]) Append(items ...T) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
-	if len(b.items) >= b.size {
-		// Invoke the iterator yield execution frame directly on the calling thread context
-		if !b.yield(b.items, nil) {
-			return false
-		}
-		// Reset the internal slice keeping the pre-allocated underlying capacity intact
-		b.items = make([]T, 0, b.size)
-	}
-
-	return true
+	b.items = append(b.items, items...)
+	b.seen += int64(len(items))
 }
 
-// Flush drains any leftover items that did not reach the threshold size
-// at the tail-end of a data stream execution.
-func (b *Buffer[T]) Flush() bool {
+func (b *Buffer[T]) Seen() int64 {
+	return b.seen
+}
+
+func (b *Buffer[T]) Size() int64 {
+	return int64(len(b.items))
+}
+
+// CollectAndReset returns a copy of accumulated elements and resets the
+// internal slice if the threshold is met, entirely isolated from locks.
+func (b *Buffer[T]) CollectAndReset(force bool) []T {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if len(b.items) > 0 {
-		if !b.yield(b.items, nil) {
-			return false
-		}
-		b.items = make([]T, 0, b.size)
+	item_sz := int64(len(b.items))
+
+	if item_sz == 0 || (!force && item_sz < b.size) {
+		return nil
 	}
 
-	return true
+	readyItems := b.items
+	b.items = make([]T, 0, b.size)
+	return readyItems
+}
+
+func (b *Buffer[T]) StartStatsTicker() {
+	b.StartStatsTickerWithDuration(30 * time.Second)
+}
+
+func (b *Buffer[T]) StartStatsTickerWithDuration(d time.Duration) {
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.ticker != nil {
+		return
+	}
+
+	b.ticker = time.NewTicker(d)
+
+	go func() {
+		for {
+			select {
+			case <-b.ticker.C:
+				slog.Debug("Buffer", "size", len(b.items), "seen", b.seen)
+			}
+		}
+	}()
+}
+
+func (b *Buffer[T]) Close() error {
+
+	if b.ticker != nil {
+		b.ticker.Stop()
+	}
+
+	return nil
 }

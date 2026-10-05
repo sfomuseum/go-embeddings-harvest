@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"maps"
 	"net/url"
 	"sync"
 
@@ -116,38 +117,20 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 
 		// Now fetch images
 
-		records_ch := make(chan []*embeddingsdb.Record)
-		err_ch := make(chan error)
-		done_ch := make(chan bool, 1)
+		// This is what we use to process records concurrently, capturing and
+		// yielding records without spilling outside of the main loop which causes
+		// all kinds of iterator/yield pain.
 
-		go func() {
+		buffer := NewBuffer[*embeddingsdb.Record](100)
+		defer buffer.Close()
 
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-done_ch:
-					return
-				case err := <-err_ch:
-
-					if !yield(nil, err) {
-						cancel()
-						return
-					}
-
-				case records := <-records_ch:
-
-					if !yield(records, nil) {
-						cancel()
-						return
-					}
-				}
-			}
-		}()
+		if opts.Verbose {
+			buffer.StartStatsTicker()
+		}
 
 		wg := new(sync.WaitGroup)
 
-		for row, err := range images_r.Iterate() {
+		for iter_row, err := range images_r.Iterate() {
 
 			if err != nil {
 				yield(nil, fmt.Errorf("Images iterator yielded an error, %w", err))
@@ -155,6 +138,8 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 			}
 
 			<-opts.Throttle
+
+			row := maps.Clone(iter_row)
 
 			wg.Go(func() {
 
@@ -175,12 +160,10 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 
 				if err != nil {
 					logger.Error("Failed to retrieve image", "url", im_url, "error", err)
-					err_ch <- err
 					return
 				}
 
 				if opts.PreCache {
-					records_ch <- make([]*embeddingsdb.Record, 0)
 					return
 				}
 
@@ -222,23 +205,32 @@ func (h *NationalGalleryOfArtHarvester) Iterate(ctx context.Context, opts *Itera
 
 				if err != nil {
 					logger.Error("Failed to derive embeddings records", "error", err)
-					err_ch <- err
 					return
 				}
 
 				if len(records) > 0 {
-					records_ch <- records
+					buffer.Append(records...)
 				}
 
 				logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 			})
+
+			if records := buffer.CollectAndReset(false); records != nil {
+				if !yield(records, nil) {
+					cancel()
+					return
+				}
+			}
 		}
 
 		wg.Wait()
 
-		done_ch <- true
-		close(records_ch)
-		close(err_ch)
+		if records := buffer.CollectAndReset(true); records != nil {
+			if !yield(records, nil) {
+				cancel()
+				return
+			}
+		}
 	}
 }
 

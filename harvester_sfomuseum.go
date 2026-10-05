@@ -147,40 +147,23 @@ func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOpti
 			return
 		}
 
-		records_ch := make(chan []*embeddingsdb.Record)
-		err_ch := make(chan error)
-		done_ch := make(chan bool, 1)
-
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		go func() {
+		// This is what we use to process records concurrently, capturing and
+		// yielding records without spilling outside of the main loop which causes
+		// all kinds of iterator/yield pain.
 
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-done_ch:
-					return
-				case err := <-err_ch:
+		buffer := NewBuffer[*embeddingsdb.Record](100)
+		defer buffer.Close()
 
-					if !yield(nil, err) {
-						cancel()
-						return
-					}
+		if opts.Verbose {
+			buffer.StartStatsTicker()
+		}
 
-				case records := <-records_ch:
-
-					if !yield(records, nil) {
-						cancel()
-						return
-					}
-				}
-			}
-		}()
+		wg := new(sync.WaitGroup)
 
 		creditlines := new(sync.Map)
-		wg := new(sync.WaitGroup)
 
 		for rec, err := range iter.Iterate(ctx, h.iterator_sources...) {
 
@@ -203,7 +186,6 @@ func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOpti
 				id, uri_args, err := uri.ParseURI(rec.Path)
 
 				if err != nil {
-					// err_ch <- err
 					logger.Error("Failed to parse path", "error", err)
 					return
 				}
@@ -218,7 +200,6 @@ func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOpti
 				rec.Body.Close()
 
 				if err != nil {
-					err_ch <- err
 					logger.Error("Failed to read record body", "error", err)
 					return
 				}
@@ -323,24 +304,32 @@ func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOpti
 
 				if err != nil {
 					logger.Error("Failed to derive embeddings records", "error", err)
-					err_ch <- err
 					return
 				}
 
 				if len(records) > 0 {
-					records_ch <- records
+					buffer.Append(records...)
 				}
 
 				logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 			})
 
+			if records := buffer.CollectAndReset(false); records != nil {
+				if !yield(records, nil) {
+					cancel()
+					return
+				}
+			}
 		}
 
 		wg.Wait()
 
-		done_ch <- true
-		close(records_ch)
-		close(err_ch)
+		if records := buffer.CollectAndReset(true); records != nil {
+			if !yield(records, nil) {
+				cancel()
+				return
+			}
+		}
 	}
 }
 

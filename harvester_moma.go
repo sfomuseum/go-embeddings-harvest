@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"maps"
 	"net/url"
 	"sync"
 
@@ -67,38 +68,16 @@ func (h *MuseumOfModernArtHarvester) Iterate(ctx context.Context, opts *IterateO
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		records_ch := make(chan []*embeddingsdb.Record)
-		err_ch := make(chan error)
-		done_ch := make(chan bool, 1)
+		buffer := NewBuffer[*embeddingsdb.Record](100)
+		defer buffer.Close()
 
-		go func() {
-
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-done_ch:
-					return
-				case err := <-err_ch:
-
-					if !yield(nil, err) {
-						cancel()
-						return
-					}
-
-				case records := <-records_ch:
-
-					if !yield(records, nil) {
-						cancel()
-						return
-					}
-				}
-			}
-		}()
+		if opts.Verbose {
+			buffer.StartStatsTicker()
+		}
 
 		wg := new(sync.WaitGroup)
 
-		for row, err := range objects_r.Iterate() {
+		for iter_row, err := range objects_r.Iterate() {
 
 			select {
 			case <-ctx.Done():
@@ -116,6 +95,8 @@ func (h *MuseumOfModernArtHarvester) Iterate(ctx context.Context, opts *IterateO
 			}
 
 			<-opts.Throttle
+
+			row := maps.Clone(iter_row)
 
 			wg.Go(func() {
 
@@ -139,7 +120,6 @@ func (h *MuseumOfModernArtHarvester) Iterate(ctx context.Context, opts *IterateO
 
 				if err != nil {
 					logger.Error("Failed to parse image URL", "url", im_url, "error", err)
-					err_ch <- err
 					return
 				}
 
@@ -158,12 +138,10 @@ func (h *MuseumOfModernArtHarvester) Iterate(ctx context.Context, opts *IterateO
 
 				if err != nil {
 					logger.Error("Failed to retrieve image", "url", im_url, "error", err)
-					err_ch <- err
 					return
 				}
 
 				if opts.PreCache {
-					records_ch <- make([]*embeddingsdb.Record, 0)
 					return
 				}
 
@@ -190,23 +168,32 @@ func (h *MuseumOfModernArtHarvester) Iterate(ctx context.Context, opts *IterateO
 
 				if err != nil {
 					logger.Error("Failed to derive embeddings records", "error", err)
-					err_ch <- err
 					return
 				}
 
 				if len(records) > 0 {
-					records_ch <- records
+					buffer.Append(records...)
 				}
 
 				logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
 			})
+
+			if records := buffer.CollectAndReset(false); records != nil {
+				if !yield(records, nil) {
+					cancel()
+					return
+				}
+			}
 		}
 
 		wg.Wait()
 
-		done_ch <- true
-		close(records_ch)
-		close(err_ch)
+		if records := buffer.CollectAndReset(true); records != nil {
+			if !yield(records, nil) {
+				cancel()
+				return
+			}
+		}
 	}
 }
 

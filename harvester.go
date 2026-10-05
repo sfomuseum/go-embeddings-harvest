@@ -29,6 +29,7 @@ type IterateOptions struct {
 	Models []string
 	// PreCache indicates whether assets should be downloaded into the cache without embedding them.
 	PreCache bool
+	Verbose  bool
 }
 
 // Harvester defines the interface that individual data source harvesters must
