@@ -29,6 +29,7 @@ type IterateOptions struct {
 	Models []string
 	// PreCache indicates whether assets should be downloaded into the cache without embedding them.
 	PreCache bool
+	// Boolean flag signaling a desire for verbose logging (to be determined by individual harvesters).
 	Verbose  bool
 }
 
