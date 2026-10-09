@@ -105,6 +105,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		Models:           models,
 		PreCache:         precache,
 		Verbose:          verbose,
+		Params:           params,
 	}
 
 	for records, err := range harvester.Iterate(ctx, iterate_opts) {

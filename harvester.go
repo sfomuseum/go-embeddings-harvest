@@ -14,6 +14,7 @@ import (
 	"github.com/sfomuseum/go-blobcache/http"
 	"github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-flags/multi"
 )
 
 // IterateOptions defines the configuration parameters and clients required
@@ -29,8 +30,10 @@ type IterateOptions struct {
 	Models []string
 	// PreCache indicates whether assets should be downloaded into the cache without embedding them.
 	PreCache bool
+	// Optional `multi.KeyValueString` instance containing zero or more {KEY}={VALUE} custom parameters to pass to your harvester.
+	Params multi.KeyValueString
 	// Boolean flag signaling a desire for verbose logging (to be determined by individual harvesters).
-	Verbose  bool
+	Verbose bool
 }
 
 // Harvester defines the interface that individual data source harvesters must

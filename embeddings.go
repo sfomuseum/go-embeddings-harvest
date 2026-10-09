@@ -112,6 +112,8 @@ func deriveEmbeddingsWithModel(ctx context.Context, cl embeddings.Embedder[float
 		Body:  opts.Body,
 	}
 
+	logger.Info("Get image embeddings...")
+
 	emb_rsp, err := cl.ImageEmbeddings(ctx, emb_req)
 
 	if err != nil {
