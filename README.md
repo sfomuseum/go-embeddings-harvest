@@ -203,6 +203,16 @@ cma:///usr/local/data/cma/openaccess/data.csv
 
 _Derive embeddings for images using the [Flickr API](https://www.flickr.com/services/api/). This harvester has been temporarily removed but will return shortly._
 
+```
+flickr://{PROVIDER_NAME}/{FLICKR_SPR_PATH}?client_uri={FLICKR_API_CLIENT_RUNTIMEVAR_URI}
+```
+
+For example:
+
+```
+flickr://flickr-commons-powerhouse?client-uri=file:///usr/local/secrets/flickr/client.txt
+```
+
 #### Museum of Modern Art
 
 Derive embeddings for object images in the [Museum of Modern Art (MoMA) open data release](https://github.com/MuseumofModernArt/collection). The MoMA harvester expects a URI in the form of:
