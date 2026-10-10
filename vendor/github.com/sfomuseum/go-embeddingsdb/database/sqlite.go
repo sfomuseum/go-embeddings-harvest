@@ -514,7 +514,7 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 			args[i] = f.Value()
 		}
 
-		q = fmt.Sprintf("%s WHERE %s", q, strings.Join(where, " AND "))
+		q = fmt.Sprintf("%s AND %s", q, strings.Join(where, " AND "))
 	}
 
 	q = fmt.Sprintf("%s ORDER BY r.subject_id, r.depiction_id, r.model ASC", q)
@@ -522,6 +522,7 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	rsp, err := pagination_sql.QueryPaginated(db.vec_db, pg_opts, q, args...)
 
 	if err != nil {
+		slog.Error("Failed to list SQLite records", "error", err, "query", q, "args", args)
 		return nil, nil, err
 	}
 
@@ -556,6 +557,18 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	}
 
 	return records, pg, nil
+}
+
+// CountRecords returns the total number of records indexed in the SQLite "records" table.
+func (db *SQLiteDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
+
+	q := fmt.Sprintf("SELECT COUNT(id) FROM %s", db.records_table.Name())
+
+	row := db.vec_db.QueryRowContext(ctx, q)
+	var count int64
+
+	err := row.Scan(&count)
+	return count, err
 }
 
 func (db *SQLiteDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {

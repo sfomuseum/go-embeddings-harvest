@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-
 	"log/slog"
 	"net/url"
 	"os"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
+	"github.com/aaronland/go-pagination/cursor"
 	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
@@ -223,8 +223,16 @@ func (e *GrpcClient) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveR
 func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	grpc_pg := &embeddingsdb_grpc.PaginationOptions{
-		Page:    countable.PageFromOptions(pg_opts),
 		PerPage: pg_opts.PerPage(),
+	}
+
+	switch pg_opts.Method() {
+	case pagination.Countable:
+		grpc_pg.Page = countable.PageFromOptions(pg_opts)
+	case pagination.Cursor:
+		grpc_pg.Cursor = pg_opts.Pointer().(string)
+	default:
+		return nil, nil, fmt.Errorf("Invalid or unsupported pagination options method")
 	}
 
 	grpc_req := &embeddingsdb_grpc.ListRecordsRequest{
@@ -273,10 +281,32 @@ func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options
 		records[i] = embeddingsdb.GrpcEmbeddingsRecordToEmbeddingsDBRecord(grpc_r)
 	}
 
-	pg_rsp, err := countable.NewResultsFromCountWithOptions(pg_opts, grpc_rsp.Pagination.Total)
+	var pg_rsp pagination.Results
 
-	if err != nil {
-		return nil, nil, err
+	switch pagination.Method(uint8(grpc_rsp.Pagination.Method)) {
+	case pagination.Countable:
+
+		pg, err := countable.NewResultsFromCountWithOptions(pg_opts, grpc_rsp.Pagination.Total)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		pg_rsp = pg
+
+	case pagination.Cursor:
+
+		pg := new(cursor.CursorResults)
+		pg.CursorPrevious = grpc_rsp.Pagination.Previous
+		pg.CursorNext = grpc_rsp.Pagination.Next
+		pg.TotalCount = grpc_rsp.Pagination.Total
+		pg.PageCount = grpc_rsp.Pagination.Pages
+		pg.PerPageCount = grpc_rsp.Pagination.PerPage
+
+		pg_rsp = pg
+
+	default:
+		return nil, nil, fmt.Errorf("Invalid or unsupported pagination method, %v", grpc_rsp.Pagination.Method)
 	}
 
 	return records, pg_rsp, nil
@@ -324,9 +354,6 @@ func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.S
 		Provider:    req.Provider,
 		DepictionId: req.DepictionId,
 		Model:       req.Model,
-		//SimilarProvider: req.SimilarProvider,
-		//MaxResults:      req.MaxResults,
-		//MaxDistance:     req.MaxDistance,
 	}
 
 	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
@@ -357,9 +384,7 @@ func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.S
 
 func (e *GrpcClient) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
-	req := &embeddingsdb_grpc.GetModelsRequest{
-		// 		Provider: providers,
-	}
+	req := &embeddingsdb_grpc.GetModelsRequest{}
 
 	// opts here...
 

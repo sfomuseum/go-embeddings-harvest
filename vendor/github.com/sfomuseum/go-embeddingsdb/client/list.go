@@ -54,7 +54,7 @@ func ListRecords(ctx context.Context, cl Client, list_opts *ListRecordsOptions, 
 		logger := slog.Default()
 
 		switch pg_type {
-		case database.CursorPaginationType:
+		case database.CursorPaginationType, database.MultiPaginationType:
 
 			pg_opts, err := cursor.NewCursorOptions()
 

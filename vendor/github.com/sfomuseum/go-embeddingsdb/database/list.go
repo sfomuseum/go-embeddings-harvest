@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
-	"strings"
 
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/aaronland/go-pagination/cursor"
@@ -103,12 +102,11 @@ func ListRecords(ctx context.Context, db Database, list_opts *ListRecordsOptions
 					break
 				}
 
-				pg_next = strings.Replace(pg_next, "after-", "", 1) // why did I add "after-" ...
 				pg_opts.Pointer(pg_next)
 				logger.Debug("Assign next cursor", "pointer", pg_next)
 			}
 
-		case CountablePaginationType:
+		case CountablePaginationType, MultiPaginationType:
 
 			current_page := list_opts.StartPage
 			pages := int64(0)

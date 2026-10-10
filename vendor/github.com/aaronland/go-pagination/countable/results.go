@@ -2,9 +2,10 @@ package countable
 
 import (
 	"fmt"
+	"math"
+
 	"github.com/aaronland/go-pagination"
 	"github.com/jtacoma/uritemplates"
-	"math"
 )
 
 // type CountableResults implements the pagination.Results interface for page or number-based pagination.
@@ -38,11 +39,11 @@ func (p *CountableResults) Pages() int64 {
 	return p.PagesCount
 }
 
-func (p *CountableResults) Next() interface{} {
+func (p *CountableResults) Next() any {
 	return p.NextPageURI
 }
 
-func (p *CountableResults) Previous() interface{} {
+func (p *CountableResults) Previous() any {
 	return p.PreviousPageURI
 }
 
@@ -54,7 +55,7 @@ func (p *CountableResults) NextURL(t *uritemplates.UriTemplate) (string, error) 
 	if next == 0 {
 		return "#", nil
 	}
-	values := map[string]interface{}{
+	values := map[string]any{
 		"next": next,
 	}
 
@@ -76,7 +77,7 @@ func (p *CountableResults) PreviousURL(t *uritemplates.UriTemplate) (string, err
 		return "#", nil
 	}
 
-	values := map[string]interface{}{
+	values := map[string]any{
 		"previous": previous,
 	}
 

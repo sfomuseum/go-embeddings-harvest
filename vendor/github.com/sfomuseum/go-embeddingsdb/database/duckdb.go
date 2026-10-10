@@ -484,6 +484,18 @@ func (db *DuckDBDatabase) IterateRecords(ctx context.Context, opts ...options.Op
 
 }
 
+// CountRecords returns the total number of records indexed in the DuckDB "embeddings" table.
+func (db *DuckDBDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
+
+	q := "SELECT COUNT(depiction_id) FROM embeddings"
+
+	row := db.vec_db.QueryRowContext(ctx, q)
+	var count int64
+
+	err := row.Scan(&count)
+	return count, err
+}
+
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 func (db *DuckDBDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 

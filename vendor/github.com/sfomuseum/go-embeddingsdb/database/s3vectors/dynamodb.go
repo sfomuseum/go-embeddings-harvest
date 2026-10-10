@@ -232,9 +232,6 @@ func (cl *DynamoDBClient) queryRecords(ctx context.Context, query_opts *dynamodb
 
 		if ok && str_key != "" {
 
-			str_key = strings.Replace(str_key, "after-", "", 1)
-			str_key = strings.Replace(str_key, "before-", "", 1)
-
 			start_key, err := decodeStartKey(str_key)
 
 			if err != nil {
