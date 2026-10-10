@@ -3,15 +3,15 @@ module github.com/sfomuseum/go-embeddings-harvest
 go 1.27.1
 
 require (
-	github.com/aaronland/go-flickr-api v1.1.9
+	github.com/aaronland/go-flickr-api v1.1.10
 	github.com/aaronland/go-jsonl v0.1.1
 	github.com/aaronland/go-roster v1.0.0
 	github.com/aaronland/go-smithsonian-openaccess v0.3.0
-	github.com/aaronland/gocloud v1.3.2
+	github.com/aaronland/gocloud v1.3.3
 	github.com/sfomuseum/go-blobcache v1.1.3
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
-	github.com/sfomuseum/go-embeddings v0.6.2
-	github.com/sfomuseum/go-embeddingsdb v0.22.2
+	github.com/sfomuseum/go-embeddings v0.6.3
+	github.com/sfomuseum/go-embeddingsdb v0.23.1
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.20.0
 	github.com/whosonfirst/go-reader/v2 v2.1.0
