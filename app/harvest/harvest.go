@@ -10,10 +10,9 @@ import (
 
 	"github.com/sfomuseum/go-blobcache"
 	"github.com/sfomuseum/go-blobcache/http"
-	sfom_embeddings "github.com/sfomuseum/go-embeddings"
+	"github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddings-harvest"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
-	"github.com/sfomuseum/go-flags/flagset"
 )
 
 func Run(ctx context.Context) error {
@@ -23,28 +22,37 @@ func Run(ctx context.Context) error {
 
 func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
-	flagset.Parse(fs)
+	opts, err := RunOptionsFromFlagSet(fs)
 
-	if verbose {
+	if err != nil {
+		return err
+	}
+
+	return RunWithOptions(ctx, opts)
+}
+
+func RunWithOptions(ctx context.Context, opts *RunOptions) error {
+
+	if opts.Verbose {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 		slog.Debug("Verbose logging enabled")
 	}
 
-	if len(models) == 0 {
+	if len(opts.Models) == 0 {
 		slog.Warn("No models defined")
 	}
 
-	slog.Debug("Set up embeddings client", "uri", embeddings_client_uri)
+	slog.Debug("Set up embeddings client", "uri", opts.EmbeddingsClientURI)
 
-	emb_cl, err := sfom_embeddings.NewEmbedder32(ctx, embeddings_client_uri)
+	emb_cl, err := embeddings.NewEmbedder32(ctx, opts.EmbeddingsClientURI)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create embeddings client, %w", err)
 	}
 
-	slog.Debug("Set up blobcache", "uri", cache_uri)
+	slog.Debug("Set up blobcache", "uri", opts.CacheURI)
 
-	blob_c, err := blobcache.NewBlobCache(ctx, cache_uri)
+	blob_c, err := blobcache.NewBlobCache(ctx, opts.CacheURI)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create blob cache, %w", err)
@@ -55,27 +63,27 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	http_cl := http.NewClient()
 
 	cache_opts := &http.GetWithCacheOptions{
-		CheckLastModTime: cache_check_lastmod,
+		CheckLastModTime: opts.CacheCheckLastmodified,
 		Client:           http_cl,
 		BlobCache:        blob_c,
 	}
 
 	if precache {
 		slog.Warn("-precache flag set, assigning parquet output to /dev/null")
-		output = "/dev/null"
+		opts.Output = "/dev/null"
 	}
 
-	slog.Debug("Set up writer", "output", output)
+	slog.Debug("Set up writer", "output", opts.Output)
 
-	wr, err := parquet.NewWriter(ctx, output)
+	wr, err := parquet.NewWriter(ctx, opts.Output)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create new writer, %w", err)
 	}
 
-	slog.Debug("Set up harvester", "uri", harvester_uri)
+	slog.Debug("Set up harvester", "uri", opts.HarvesterURI)
 
-	harvester, err := harvest.NewHarvester(ctx, harvester_uri)
+	harvester, err := harvest.NewHarvester(ctx, opts.HarvesterURI)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create harvester, %w", err)
@@ -100,9 +108,9 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		}
 	}()
 
-	throttle := make(chan bool, workers)
+	throttle := make(chan bool, opts.Workers)
 
-	for i := 0; i < workers; i++ {
+	for i := 0; i < opts.Workers; i++ {
 		throttle <- true
 	}
 
@@ -110,10 +118,10 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		EmbeddingsClient: emb_cl,
 		CacheOptions:     cache_opts,
 		Throttle:         throttle,
-		Models:           models,
-		PreCache:         precache,
-		Verbose:          verbose,
-		Params:           params,
+		Models:           opts.Models,
+		PreCache:         opts.Precache,
+		Verbose:          opts.Verbose,
+		Params:           opts.Params,
 	}
 
 	slog.Debug("Harvest records")

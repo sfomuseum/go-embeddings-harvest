@@ -200,6 +200,7 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 		emb_cb := func(ctx context.Context, r io.ReadSeekCloser, err error) error {
 
 			if err != nil {
+				logger.Error("Paginated response returned an error", "error", err)
 				return err
 			}
 
@@ -208,7 +209,32 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 			body, err := io.ReadAll(r)
 
 			if err != nil {
+				logger.Error("Failed to read API response body", "error", err)
 				return fmt.Errorf("Failed to read response body, %w", err)
+			}
+
+			stat_rsp := gjson.GetBytes(body, "stat")
+
+			if stat_rsp.String() != "ok" {
+
+				err_code := gjson.GetBytes(body, "code").String()
+				err_msg := gjson.GetBytes(body, "message").String()
+
+				logger.Error("API did not return ok", "code", err_code, "message", err_msg)
+				return fmt.Errorf("API did not return ok, %s (%s)", err_code, err_msg)
+			}
+
+			spr_parts := strings.Split(h.spr_path, ".")
+
+			if len(spr_parts) > 0 {
+
+				spr_root := spr_parts[0]
+
+				page_rsp := gjson.GetBytes(body, fmt.Sprintf("%s.page", spr_root))
+				pages_rsp := gjson.GetBytes(body, fmt.Sprintf("%s.pages", spr_root))
+				total_rsp := gjson.GetBytes(body, fmt.Sprintf("%s.total", spr_root))
+
+				logger.Info("process results", "page", page_rsp.Int(), "pages", pages_rsp.Int(), "total", total_rsp.Int())
 			}
 
 			// Check for error here
@@ -216,6 +242,7 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 			photos_rsp := gjson.GetBytes(body, h.spr_path)
 
 			if !photos_rsp.Exists() {
+				logger.Error("Paginated response missing SPR path", "path", h.spr_path)
 				return fmt.Errorf("Response body missing '%s' path", h.spr_path)
 			}
 
