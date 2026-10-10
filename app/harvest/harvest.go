@@ -34,11 +34,15 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		slog.Warn("No models defined")
 	}
 
+	slog.Debug("Set up embeddings client", "uri", embeddings_client_uri)
+
 	emb_cl, err := sfom_embeddings.NewEmbedder32(ctx, embeddings_client_uri)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create embeddings client, %w", err)
 	}
+
+	slog.Debug("Set up blobcache", "uri", cache_uri)
 
 	blob_c, err := blobcache.NewBlobCache(ctx, cache_uri)
 
@@ -61,11 +65,15 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		output = "/dev/null"
 	}
 
+	slog.Debug("Set up writer", "output", output)
+
 	wr, err := parquet.NewWriter(ctx, output)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create new writer, %w", err)
 	}
+
+	slog.Debug("Set up harvester", "uri", harvester_uri)
 
 	harvester, err := harvest.NewHarvester(ctx, harvester_uri)
 
@@ -107,6 +115,8 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		Verbose:          verbose,
 		Params:           params,
 	}
+
+	slog.Debug("Harvest records")
 
 	for records, err := range harvester.Iterate(ctx, iterate_opts) {
 

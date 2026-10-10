@@ -40,7 +40,8 @@ type embeddingsForFlickrSPROptions struct {
 type FlickrAPIHarvester struct {
 	Harvester
 	flickr_client client.Client
-	spr_path string
+	provider      string
+	spr_path      string
 }
 
 func NewFlickrAPIHarvester(ctx context.Context, uri string) (Harvester, error) {
@@ -51,21 +52,31 @@ func NewFlickrAPIHarvester(ctx context.Context, uri string) (Harvester, error) {
 		return nil, err
 	}
 
+	provider := u.Host
+
+	if provider == "" {
+		provider = "flickr"
+	}
+
 	spr_path := u.Path
 
 	if spr_path == "" {
 		spr_path = "photos.photo"
 	}
-	
+
 	q := u.Query()
 
-	flickr_client_uri := q.Get("client_uri")
+	flickr_client_uri := q.Get("client-uri")
+
+	slog.Debug("Get client URI from runtimevar", "uri", flickr_client_uri)
 
 	client_uri, err := runtimevar.StringVar(ctx, flickr_client_uri)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to derive Flickr client URI, %w", err)
 	}
+
+	slog.Debug("Create new Flickr API client")
 
 	flickr_cl, err := client.NewClient(ctx, client_uri)
 
@@ -75,7 +86,8 @@ func NewFlickrAPIHarvester(ctx context.Context, uri string) (Harvester, error) {
 
 	h := &FlickrAPIHarvester{
 		flickr_client: flickr_cl,
-		spr_path: spr_path,
+		provider:      provider,
+		spr_path:      spr_path,
 	}
 
 	return h, nil
@@ -86,6 +98,7 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
 
 		logger := slog.Default()
+		logger = logger.With("provider", h.provider)
 
 		buffer := NewBuffer[*embeddingsdb.Record](100)
 		defer buffer.Close()
@@ -174,13 +187,13 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 		}
 
 		logger = logger.With("args", args.Encode())
-		
+
 		//
 
 		emb_opts := &embeddingsForFlickrSPROptions{
 			EmbeddingsClient: opts.EmbeddingsClient,
 			Models:           opts.Models,
-			Provider:         "flickr", // fix me... provider,
+			Provider:         h.provider,
 			CacheOptions:     opts.CacheOptions,
 		}
 
@@ -197,6 +210,8 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 			if err != nil {
 				return fmt.Errorf("Failed to read response body, %w", err)
 			}
+
+			// Check for error here
 
 			photos_rsp := gjson.GetBytes(body, h.spr_path)
 
@@ -229,6 +244,7 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 						records, err := h.embeddingsForFlickrSPR(ctx, emb_opts, ph_rsp)
 
 						if err != nil {
+							logger.Error("Failed to derive embeddings for photo response", "error", err)
 							ph_err = err
 							return
 						}
@@ -256,6 +272,8 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 
 			return nil
 		}
+
+		logger.Debug("Execute paginated method")
 
 		err := client.ExecuteMethodPaginatedWithClient(ctx, h.flickr_client, args, emb_cb)
 
