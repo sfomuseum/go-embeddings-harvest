@@ -19,6 +19,8 @@ var output string
 var verbose bool
 var precache bool
 
+var include multi.MultiCSVString
+var exclude multi.MultiCSVString
 var models multi.MultiCSVString
 
 func DefaultFlagSet() *flag.FlagSet {
@@ -36,6 +38,9 @@ func DefaultFlagSet() *flag.FlagSet {
 
 	fs.StringVar(&cache_uri, "cache-uri", "null://", "A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached.")
 	fs.BoolVar(&cache_check_lastmod, "cache-check-lastmod", false, "A boolean value to indicate whether the last modified date of an object to harvest should be compared against the local cache.")
+
+	fs.Var(&include, "include", "Zero or more Commons organization NSIDs or \"safe\" URLs to include for harvesting.")
+	fs.Var(&exclude, "exclude", "Zero or more Commons organization NSIDs or \"safe\" URLs to exclude from harvesting.")
 
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
 

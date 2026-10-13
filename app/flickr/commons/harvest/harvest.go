@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -86,6 +87,22 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			n = filepath.Base(n)
 			name = strings.TrimRight(n, "/")
 			break
+		}
+
+		if len(exclude) > 0 {
+
+			if slices.Contains(exclude, nsid) || slices.Contains(exclude, name) {
+				slog.Info("Skip (excluded)", "nsid", nsid, "name", name)
+				continue
+			}
+		}
+
+		if len(include) > 0 {
+
+			if !slices.Contains(include, nsid) && !slices.Contains(include, name) {
+				slog.Info("Skip (not included)", "nsid", nsid, "name", name)
+				continue
+			}
 		}
 
 		// Make sure there are no NSID "@" symbols. For example:
