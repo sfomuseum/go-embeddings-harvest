@@ -201,7 +201,7 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 
 			if err != nil {
 				logger.Error("Paginated response returned an error", "error", err)
-				return err
+				return nil
 			}
 
 			defer r.Close()
@@ -272,7 +272,7 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 
 						if err != nil {
 							logger.Error("Failed to derive embeddings for photo response", "error", err)
-							ph_err = err
+							// ph_err = err
 							return
 						}
 
