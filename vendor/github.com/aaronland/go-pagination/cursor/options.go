@@ -28,7 +28,7 @@ func (opts *CursorOptions) Method() pagination.Method {
 	return pagination.Cursor
 }
 
-func (opts *CursorOptions) Pointer(args ...interface{}) interface{} {
+func (opts *CursorOptions) Pointer(args ...any) any {
 
 	if len(args) >= 1 {
 		opts.cursor = args[0].(string)

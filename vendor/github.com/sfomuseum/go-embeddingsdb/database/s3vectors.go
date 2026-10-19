@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	aa_auth "github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
@@ -18,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors/document"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors/types"
+	"github.com/aws/smithy-go"
 	"github.com/sfomuseum/go-embeddingsdb"
 	db_s3vectors "github.com/sfomuseum/go-embeddingsdb/database/s3vectors"
 	"github.com/sfomuseum/go-embeddingsdb/options"
@@ -712,7 +715,7 @@ func (db *S3VectorsDatabase) listRecords(ctx context.Context, pg_opts pagination
 	per_page := pg_opts.PerPage()
 	pointer := pg_opts.Pointer()
 
-	var prev_cursor string
+	var prev_cursor string // S3Vectors does not have "backwards" pagination
 	var next_cursor string
 
 	if per_page > 0 {
@@ -721,8 +724,9 @@ func (db *S3VectorsDatabase) listRecords(ctx context.Context, pg_opts pagination
 
 	if pointer != nil {
 
-		if token, ok := pointer.(string); ok && token != "" {
-			prev_cursor = token
+		token, ok := pointer.(string)
+
+		if ok && token != "" {
 			list_opts.NextToken = aws.String(token)
 		}
 	}
@@ -795,6 +799,87 @@ func (db *S3VectorsDatabase) IterateRecords(ctx context.Context, opts ...options
 			}
 		}
 	}
+}
+
+// CountRecords returns the total number of records indexed in an S3Vectors bucket. This operation requires scanning the entire bucket and is not "fast".
+func (db *S3VectorsDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
+
+	return 0, NotAvailable
+
+	max_segments := int32(16)
+	count_total := int64(0)
+
+	wg := new(sync.WaitGroup)
+
+	for i := int32(0); i < max_segments; i++ {
+
+		worker := i
+		segment_count := int64(0)
+
+		wg.Go(func() {
+
+			var next_token *string
+
+			for {
+				input := &s3vectors.ListVectorsInput{
+					VectorBucketName: aws.String(db.bucket),
+					IndexName:        aws.String(db.index),
+					NextToken:        next_token,
+					SegmentCount:     aws.Int32(int32(max_segments)),
+					SegmentIndex:     worker,
+					ReturnData:       false,
+					ReturnMetadata:   false,
+				}
+
+				var output *s3vectors.ListVectorsOutput
+				var err error
+
+				backoff := 200 * time.Millisecond
+				maxRetries := 5
+
+				for attempt := 0; attempt < maxRetries; attempt++ {
+
+					output, err = db.client.ListVectors(ctx, input)
+
+					if err == nil {
+						break // Success! Break out of retry wrapper
+					}
+
+					var oe *smithy.OperationError
+					var ae smithy.APIError
+
+					if errors.As(err, &oe) && errors.As(oe.Err, &ae) && (ae.ErrorCode() == "TooManyRequestsException" || ae.ErrorCode() == "ThrottlingException") {
+
+						slog.Warn("Worker throttled. Backing off...", "idx", worker, "attempt", attempt+1, "wait_ms", backoff.Milliseconds())
+						time.Sleep(backoff)
+						backoff *= 2 // Exponential increment
+						continue
+					}
+
+					break
+				}
+
+				if err != nil {
+					slog.Error("Segment worker failed after retries", "idx", worker, "error", err)
+					return
+				}
+
+				segment_count += int64(len(output.Vectors))
+
+				if output.NextToken == nil || *output.NextToken == "" {
+					break
+				}
+
+				next_token = output.NextToken
+			}
+
+			atomic.AddInt64(&count_total, segment_count)
+		})
+	}
+
+	wg.Wait()
+
+	return count_total, nil
 }
 
 // Return the Unix timestamp of the last update to the Database instance.

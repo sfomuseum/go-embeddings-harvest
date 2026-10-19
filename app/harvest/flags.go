@@ -15,6 +15,7 @@ var harvester_uri string
 var embeddings_client_uri string
 var cache_uri string
 var cache_check_lastmod bool
+var params multi.KeyValueString
 
 var workers int
 var output string
@@ -42,6 +43,7 @@ func DefaultFlagSet() *flag.FlagSet {
 	fs.StringVar(&cache_uri, "cache-uri", "null://", "A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached.")
 	fs.BoolVar(&cache_check_lastmod, "cache-check-lastmod", false, "A boolean value to indicate whether the last modified date of an object to harvest should be compared against the local cache.")
 
+	fs.Var(&params, "param", "Zero or more {KEY}={VALUE} custom parameters to pass to your harvester.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
 
 	fs.Usage = func() {

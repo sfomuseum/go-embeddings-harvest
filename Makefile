@@ -11,3 +11,4 @@ vuln:
 
 cli:
 	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-embeddings cmd/harvest-embeddings/main.go
+	go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/harvest-flickr-commons-embeddings cmd/harvest-flickr-commons-embeddings/main.go

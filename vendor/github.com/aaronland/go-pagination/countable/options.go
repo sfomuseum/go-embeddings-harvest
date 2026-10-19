@@ -42,7 +42,7 @@ func (opts *CountableOptions) PerPage(args ...int64) int64 {
 	return opts.perpage
 }
 
-func (opts *CountableOptions) Pointer(args ...interface{}) interface{} {
+func (opts *CountableOptions) Pointer(args ...any) any {
 
 	if len(args) >= 1 {
 		opts.page = args[0].(int64)

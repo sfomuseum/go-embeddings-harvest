@@ -92,6 +92,10 @@ func (db *NullDatabase) IterateRecords(ctx context.Context, opts ...options.Opti
 	return func(yield func(*embeddingsdb.Record, error) bool) {}
 }
 
+func (db *NullDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
+	return 0, nil
+}
+
 // Return the Unix timestamp of the last update to the Database instance.
 func (db *NullDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 	return 0, nil

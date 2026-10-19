@@ -1,8 +1,9 @@
 package pagination
 
 import (
-	"github.com/jtacoma/uritemplates"
 	"math"
+
+	"github.com/jtacoma/uritemplates"
 )
 
 // Method defines the type of pagination Options or Results.
@@ -24,7 +25,7 @@ type Options interface {
 	// Get or set the name of the column to use when paginating results
 	Column(...string) string
 	// Get or set the pointer (page number or cursor) for the next set of query results
-	Pointer(...interface{}) interface{}
+	Pointer(...any) any
 	// Return the Method type associated with Options
 	Method() Method
 }
@@ -40,9 +41,9 @@ type Results interface {
 	// The total number of pages for a paginated query response.
 	Pages() int64
 	// The value to use to advance to the next set of results in a query response.
-	Next() interface{}
+	Next() any
 	// The value to use to rewind to the previous set of results in a query response.
-	Previous() interface{}
+	Previous() any
 	// The URL to the next set of results in a query response
 	NextURL(t *uritemplates.UriTemplate) (string, error)
 	// The URL to the previous set of results in a query response
