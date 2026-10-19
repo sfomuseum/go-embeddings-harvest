@@ -25,9 +25,9 @@ var models multi.MultiCSVString
 
 func DefaultFlagSet() *flag.FlagSet {
 
-	fs := flagset.NewFlagSet("cma")
+	fs := flagset.NewFlagSet("flickr")
 
-	fs.StringVar(&client_uri, "client-uri", "", "...")
+	fs.StringVar(&client_uri, "client-uri", "", "A gocloud.dev/runtimevar URI containing a aaronland/go-flickr-api/client.Client URI.")
 	fs.IntVar(&workers, "workers", 5, "The number of workers to use to fetch images (and derive embeddings) concurrently")
 	fs.BoolVar(&precache, "precache", false, "Fetch images from source and store in (blob) cache without generating embeddings. If true this flag will reassign -output to /dev/null.")
 
@@ -39,13 +39,13 @@ func DefaultFlagSet() *flag.FlagSet {
 	fs.StringVar(&cache_uri, "cache-uri", "null://", "A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached.")
 	fs.BoolVar(&cache_check_lastmod, "cache-check-lastmod", false, "A boolean value to indicate whether the last modified date of an object to harvest should be compared against the local cache.")
 
-	fs.Var(&include, "include", "Zero or more Commons organization NSIDs or \"safe\" URLs to include for harvesting.")
-	fs.Var(&exclude, "exclude", "Zero or more Commons organization NSIDs or \"safe\" URLs to exclude from harvesting.")
+	fs.Var(&include, "include", "Zero or more Commons organization NSIDs or \"safe\" URLs to include for harvesting. If empty then all Flickr Commons accounts will be harvested.")
+	fs.Var(&exclude, "exclude", "Zero or more Commons organization NSIDs or \"safe\" URLs to exclude from harvesting. If empty then no Flickr Commons accounts will be excluded.")
 
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Generate Parquet file containing rows, for a given source (a \"harvester\"), which map to the `Record` data structure.\n")
+		fmt.Fprintf(os.Stderr, "Generate Parquet file containing rows, for one or more Flickr Commons members, which map to the `Record` data structure.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()

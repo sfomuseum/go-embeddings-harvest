@@ -37,6 +37,10 @@ type embeddingsForFlickrSPROptions struct {
 	PreCache bool
 }
 
+
+// FlickrAPIHarvester implements the Harvester interface for the Flickr API.
+// It uses the go-flickr-api client to query Flickr, derives embeddings for
+// each photo, and writes the resulting records into the iterator.
 type FlickrAPIHarvester struct {
 	Harvester
 	flickr_client client.Client
@@ -44,6 +48,12 @@ type FlickrAPIHarvester struct {
 	spr_path      string
 }
 
+// NewFlickrAPIHarvester creates a new FlickrAPIHarvester from a URI.
+//
+// The URI is parsed to extract the provider host and the SPR (search result
+// path) to use.  The query part may contain a `client-uri` parameter that
+// points to a runtime variable holding the Flickr API client URI.
+// A new go-flickr-api client is created and stored in the harvester.
 func NewFlickrAPIHarvester(ctx context.Context, uri string) (Harvester, error) {
 
 	u, err := url.Parse(uri)
@@ -93,6 +103,10 @@ func NewFlickrAPIHarvester(ctx context.Context, uri string) (Harvester, error) {
 	return h, nil
 }
 
+// Iterate implements Harvester.Iterate for FlickrAPIHarvester.
+// It queries Flickr using the configured client, handles pagination,
+// derives embeddings for each photo, and streams the resulting
+// []*embeddingsdb.Record slices to the caller via the returned iterator.
 func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
@@ -317,6 +331,7 @@ func (h *FlickrAPIHarvester) Iterate(ctx context.Context, opts *IterateOptions) 
 	}
 }
 
+// Close implements Harvester.Close for FlickrAPIHarvester.
 func (h *FlickrAPIHarvester) Close() error {
 	return nil
 }
