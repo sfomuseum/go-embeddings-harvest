@@ -10,7 +10,7 @@ require (
 	github.com/aaronland/gocloud v1.3.4
 	github.com/sfomuseum/go-blobcache v1.1.5
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
-	github.com/sfomuseum/go-embeddings v0.7.1
+	github.com/sfomuseum/go-embeddings v0.7.2
 	github.com/sfomuseum/go-embeddingsdb v0.23.1
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.20.0
@@ -127,7 +127,7 @@ require (
 	github.com/hashicorp/go-getter v1.8.6 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.8.0 // indirect
-	github.com/hybridgroup/yzma v1.30.0 // indirect
+	github.com/hybridgroup/yzma v1.31.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jtacoma/uritemplates v1.0.0 // indirect
 	github.com/jupiterrider/ffi v0.8.0 // indirect
@@ -176,6 +176,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
+	golang.org/x/image v0.47.0 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
