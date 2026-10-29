@@ -128,7 +128,7 @@ The easiest way to get started is to run the handy `cli` Makefile target to buil
 ```
 $> make cli
 go build -mod vendor -ldflags="-s -w" -o bin/harvest-embeddings cmd/harvest-embeddings/main.go
-$> make cli
+go build -mod vendor -ldflags="-s -w" -o bin/harvest-flickr-commons-embeddings cmd/harvest-flickr-commons-embeddings/main.go
 ```
 
 ### harvest-embeddings
@@ -172,6 +172,54 @@ $> ./bin/harvest-embeddings \
 
 The `-harvester-uri`, `-embeddings-client-uri` and `-cache-uri` flags are discussed in the [Harvester](#harvesters), [Embeddings clients](#embeddings-client) and [Caches](#caches) sections below.
 
+### harvest-flickr-commons-embedding
+
+Generate Parquet file containing rows, for one or more Flickr Commons members, which map to the `Record` data structure.
+
+```
+$> ./bin/harvest-flickr-commons-embeddings -h
+Generate Parquet file containing rows, for one or more Flickr Commons members, which map to the `Record` data structure.
+Usage:
+	./bin/harvest-flickr-commons-embeddings [options]Valid options are:
+  -cache-check-lastmod
+    	A boolean value to indicate whether the last modified date of an object to harvest should be compared against the local cache.
+  -cache-uri string
+    	A register gocloud.dev/blob.Bucket URI to use for caching images. If null:// then no images will be cached. (default "null://")
+  -client-uri string
+    	A gocloud.dev/runtimevar URI containing a aaronland/go-flickr-api/client.Client URI.
+  -embeddings-client-uri string
+    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "mobileclip://?client-uri=grpc://localhost:8080")
+  -exclude value
+    	Zero or more Commons organization NSIDs or "safe" URLs to exclude from harvesting. If empty then no Flickr Commons accounts will be excluded.
+  -include value
+    	Zero or more Commons organization NSIDs or "safe" URLs to include for harvesting. If empty then all Flickr Commons accounts will be harvested.
+  -model value
+    	One or more models to derive embeddings for. This may also be a comma-separated list.
+  -output string
+    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "/dev/null")
+  -precache
+    	Fetch images from source and store in (blob) cache without generating embeddings. If true this flag will reassign -output to /dev/null.
+  -verbose
+    	Enable verbose (debug) logging.
+  -workers int
+    	The number of workers to use to fetch images (and derive embeddings) concurrently (default 5)
+```
+
+_Note: Everything this tool does could also be done using the `harvest-embeddings` tool and Flickr Commons specific flags. It is provided as a convenience._
+
+For example:
+
+```
+$> ./bin/harvest-flickr-commons-embeddings \
+	-client-uri 'file:///path/to/flickr/api/client-uri.txt' \
+	-embeddings-client-uri 'siglip-client://?client-uri=http://localhost:5000' \	
+	-cache-uri file:///usr/local/data/blobcache/ \
+	-include auckland-museum \
+	-output work/auckland-museum-flickr-naflex.parquet	
+```
+
+The `-client-uri`, `-embeddings-client-uri` and `-cache-uri` flags are discussed in the [Flickr](#flickr), [Embeddings clients](#embeddings-client) and [Caches](#caches) sections below.
+
 #### Harvesters
 
 Harvesters implement the `Harvester` interface to return records suitable for storing in a [sfomuseum/go-embeddingsdb](https://github.com/sfomuseum/go-embeddingsdb) database instance. That interface looks like this:
@@ -202,6 +250,16 @@ cma:///usr/local/data/cma/openaccess/data.csv
 #### Flickr
 
 _Derive embeddings for images using the [Flickr API](https://www.flickr.com/services/api/). This harvester has been temporarily removed but will return shortly._
+
+```
+flickr://{PROVIDER_NAME}/{FLICKR_SPR_PATH}?client_uri={FLICKR_API_CLIENT_RUNTIMEVAR_URI}
+```
+
+For example:
+
+```
+flickr://flickr-commons-powerhouse?client-uri=file:///usr/local/secrets/flickr/client.txt
+```
 
 #### Museum of Modern Art
 

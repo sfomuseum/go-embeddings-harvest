@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 
 	sfom_sql "github.com/sfomuseum/go-database/sql"
 )
@@ -65,7 +65,7 @@ func setupBlobCacheIndex(ctx context.Context, index_dsn string) (*sql.DB, error)
 		slog.Debug("Result blobcache index DSN", "dsn", index_dsn)
 	}
 
-	index_db, err := sql.Open("sqlite3", index_dsn)
+	index_db, err := sql.Open("sqlite", index_dsn)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to instantiate index database, %w", err)
