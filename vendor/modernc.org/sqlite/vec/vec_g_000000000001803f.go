@@ -4,6 +4,10 @@
 
 package vec
 
+const m_WINT_MAX = "INT32_MAX"
+
+const m_WINT_MIN = "INT32_MIN"
+
 const m___CLANG_ATOMIC_BOOL_LOCK_FREE = 2
 
 const m___CLANG_ATOMIC_CHAR16_T_LOCK_FREE = 2
@@ -67,6 +71,8 @@ const m___FPCLASS_POSZERO = 0x0040
 const m___FPCLASS_QNAN = 0x0002
 
 const m___FPCLASS_SNAN = 0x0001
+
+const m___GNUC_PATCHLEVEL__ = 1
 
 const m___GNUC__ = 4
 
@@ -167,12 +173,6 @@ const m___SCHAR_MAX__ = 127
 const m___SHRT_MAX__ = 32767
 
 const m___SIG_ATOMIC_MAX__ = 2147483647
-
-const m___STDC_EMBED_EMPTY__ = 2
-
-const m___STDC_EMBED_FOUND__ = 1
-
-const m___STDC_EMBED_NOT_FOUND__ = 0
 
 const m___UINT16_FMTX__ = "hX"
 
