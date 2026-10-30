@@ -124,6 +124,15 @@ func RunWithOptions(ctx context.Context, opts *RunOptions) error {
 		Params:           opts.Params,
 	}
 
+	if len(iterate_opts.Models) == 0 {
+
+		slog.War("No models specified, assigning stub 'null://' model.")
+
+		iterate_opts.Models = []string{
+			"null://",
+		}
+	}
+
 	slog.Debug("Harvest records")
 
 	for records, err := range harvester.Iterate(ctx, iterate_opts) {
