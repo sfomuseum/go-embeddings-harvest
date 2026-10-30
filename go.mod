@@ -10,8 +10,8 @@ require (
 	github.com/aaronland/gocloud v1.3.4
 	github.com/sfomuseum/go-blobcache v1.1.5
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
-	github.com/sfomuseum/go-embeddings v0.7.2
-	github.com/sfomuseum/go-embeddingsdb v0.23.1
+	github.com/sfomuseum/go-embeddings v0.8.0
+	github.com/sfomuseum/go-embeddingsdb v0.23.2
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.20.0
 	github.com/whosonfirst/go-reader/v2 v2.1.0
@@ -107,6 +107,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.16 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.5 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

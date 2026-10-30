@@ -674,10 +674,10 @@ func (db *MultiDatabase) Models(ctx context.Context, opts ...options.Option) ([]
 
 		go func(target_db Database) {
 
-			defer func(){
+			defer func() {
 				done_ch <- true
 			}()
-			
+
 			target_models, err := target_db.Models(db_ctx, opts...)
 
 			if err != nil {

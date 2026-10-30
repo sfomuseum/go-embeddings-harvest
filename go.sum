@@ -215,6 +215,8 @@ github.com/felixge/httpsnoop v1.1.0 h1:3YtUj32ZZkqZtt3sZZsClsymw/QDuVfpNhoA31zeO
 github.com/felixge/httpsnoop v1.1.0/go.mod h1:Zqxgdd+1Rkcz8euOqdr7lqgCRJztwr5hp9vDSi5UZCE=
 github.com/fsnotify/fsnotify v1.10.1 h1:b0/UzAf9yR5rhf3RPm9gf3ehBPpf0oZKIjtpKrx59Ho=
 github.com/fsnotify/fsnotify v1.10.1/go.mod h1:TLheqan6HD6GBK6PrDWyDPBaEV8LspOxvPSjC+bVfgo=
+github.com/gabriel-vasile/mimetype v1.4.16 h1:5izNFuvA37st1dDRAcA7TtmngBmRgiIPDmTtiEvjx1E=
+github.com/gabriel-vasile/mimetype v1.4.16/go.mod h1:3oFFwxX8kTklZwzIl2aQEDZT0lKY8xH92ST88bAwba4=
 github.com/go-jose/go-jose/v4 v4.1.5 h1:RjgjO2LOtWOJKUC5wpwY9LR3B3vwVAz6JS2YHfYU6eA=
 github.com/go-jose/go-jose/v4 v4.1.5/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
@@ -334,10 +336,10 @@ github.com/sfomuseum/go-database v0.0.22 h1:xosrkMBardcXZHJbSR2x2lc8SjGbj2la6WjK
 github.com/sfomuseum/go-database v0.0.22/go.mod h1:bp7w0NhPVHWyWapw4RKJKhhCvxWC+boaQuJKA7mJ4kU=
 github.com/sfomuseum/go-edtf v1.3.0 h1:07oBf8NcWmpwIzUz/WMgTz1huQNVdiJ/IjFzkIRGj2Q=
 github.com/sfomuseum/go-edtf v1.3.0/go.mod h1:4RLvbBp7XhqRuDVhJjYUKY5napMKQvcZxQnIb/i1tyo=
-github.com/sfomuseum/go-embeddings v0.7.2 h1:9qf010ySlyqUByfWZDctbk3QBNtDrrYe1kKXSXWLXPI=
-github.com/sfomuseum/go-embeddings v0.7.2/go.mod h1:1zmnSpC6RbvzsNwdEGwJC1uXi/nKqeYz5S5bVR2frF0=
-github.com/sfomuseum/go-embeddingsdb v0.23.1 h1:58VHE1RnoufVmdXxNHA5EqATyc0qlBLGTAUYT3Ez6xE=
-github.com/sfomuseum/go-embeddingsdb v0.23.1/go.mod h1:69Z3tEnyWVLSYNu1DrbkCuTeknUsUOVfUYhQojdSGck=
+github.com/sfomuseum/go-embeddings v0.8.0 h1:K2FbAKykWNcz7COEUD/5XHF2d79SNsR4aJGOX+7TNR4=
+github.com/sfomuseum/go-embeddings v0.8.0/go.mod h1:jXZv4v2rdKa6I8X+fl5S0i9zX2CZMrleDcUhioQvw5Q=
+github.com/sfomuseum/go-embeddingsdb v0.23.2 h1:xO8uWSy/8li/6mFVIMXK0h0fawwo6/uDJXJB9KQ6OxQ=
+github.com/sfomuseum/go-embeddingsdb v0.23.2/go.mod h1:e6DVAuSTydVJMi4nwgsplgY5ZpQCWvDVBhz1K9AqL6A=
 github.com/sfomuseum/go-encoderfile v0.0.1 h1:ht0GYR0b/KuljcmPIas5/0/nGNKxl9h/TewAtNfhM2c=
 github.com/sfomuseum/go-encoderfile v0.0.1/go.mod h1:zFc9CxM/uEW2vXN6Wk9Zy1aEz3PdXlJVvx8Nzslbe8g=
 github.com/sfomuseum/go-flags v0.12.1 h1:xvg3iEz510JPr9ItPxOOF2C12JnlplodT1V/1Ty7Pg8=
