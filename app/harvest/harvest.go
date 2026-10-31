@@ -126,7 +126,7 @@ func RunWithOptions(ctx context.Context, opts *RunOptions) error {
 
 	if len(iterate_opts.Models) == 0 {
 
-		slog.War("No models specified, assigning stub 'null://' model.")
+		slog.Warn("No models specified, assigning stub 'null://' model.")
 
 		iterate_opts.Models = []string{
 			"null://",
