@@ -10,8 +10,8 @@ require (
 	github.com/aaronland/gocloud v1.3.4
 	github.com/sfomuseum/go-blobcache v1.1.5
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
-	github.com/sfomuseum/go-embeddings v0.8.0
-	github.com/sfomuseum/go-embeddingsdb v0.23.2
+	github.com/sfomuseum/go-embeddings v0.8.1
+	github.com/sfomuseum/go-embeddingsdb v0.23.3
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.20.0
 	github.com/whosonfirst/go-reader/v2 v2.1.0
@@ -41,7 +41,7 @@ require (
 	github.com/aaronland/go-json-query v0.3.0 // indirect
 	github.com/aaronland/go-pagination v0.4.0 // indirect
 	github.com/aaronland/go-pagination-sql v0.2.0 // indirect
-	github.com/andybalholm/brotli v1.2.0 // indirect
+	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/apache/arrow-go/v18 v18.5.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.47.3 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.22 // indirect
@@ -128,11 +128,11 @@ require (
 	github.com/hashicorp/go-getter v1.8.6 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.8.0 // indirect
-	github.com/hybridgroup/yzma v1.31.0 // indirect
+	github.com/hybridgroup/yzma v1.32.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jtacoma/uritemplates v1.0.0 // indirect
 	github.com/jupiterrider/ffi v0.8.0 // indirect
-	github.com/klauspost/compress v1.18.7 // indirect
+	github.com/klauspost/compress v1.20.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
@@ -175,7 +175,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.46.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.46.0 // indirect
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/crypto v0.58.1-0.20261009181718-2f1f834330b2 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/image v0.47.0 // indirect
 	golang.org/x/mod v0.42.0 // indirect
