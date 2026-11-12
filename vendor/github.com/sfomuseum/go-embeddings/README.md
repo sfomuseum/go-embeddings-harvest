@@ -194,6 +194,7 @@ Valid query parameters are:
 | Name | Value | Required | Notes |
 | --- | --- | --- | --- |
 | client-uri | string | no | The URI for the `llamacpp` HTTP server endpoint. Default is `http://localhost:9931`. |
+| max-pixel-size | int | no | If greater than 0, nsure images are less than, or resized to, a maximum pixel value. Default is 0. |
 
 For example:
 
@@ -604,7 +605,7 @@ Where `{PATH_TO_YZMA}` is the path the yzma-specific llama.cpp build. If empty t
 | model-root | string | no | Directory where the llama model files are stored.  If omitted, a subdirectory `models` of the library root (`lib_path`) is used. |
 | llama-max-pixels | int | no | The maximum number of pixels an image can have before it is automatically resized. Default is 400, 000. |
 | llama-verbose | bool | no | Enable verbose llama.cpp logging. |
-
+| slots | int | no | The maximum number of llama contexts (concurrent requests) per model. Default is 4. |
 For example:
 
 ```

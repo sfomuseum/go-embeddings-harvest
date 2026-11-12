@@ -1,0 +1,7 @@
+{
+  "duckdb_version": "v2.0.0",
+  "platform": "darwin-arm64",
+  "sha256": "c3a571e6d4a0da97534c631df463ab13c07f8cf78049625f5df936b7beaab9ce",
+  "source": "d54cbbe3df17e8e5ce68312f483b4155836112aa",
+  "url": "https://github.com/duckdb/duckdb/releases/download/v2.0.0/duckdb-static-libs-osx-arm64.tar.gz"
+}
