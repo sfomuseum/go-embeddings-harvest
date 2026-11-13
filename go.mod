@@ -7,10 +7,10 @@ require (
 	github.com/aaronland/go-jsonl v0.1.1
 	github.com/aaronland/go-roster v1.0.0
 	github.com/aaronland/go-smithsonian-openaccess v0.3.0
-	github.com/aaronland/gocloud v1.3.5
-	github.com/sfomuseum/go-blobcache v1.1.6
+	github.com/aaronland/gocloud v1.3.6
+	github.com/sfomuseum/go-blobcache v1.2.0
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
-	github.com/sfomuseum/go-embeddings v0.9.0
+	github.com/sfomuseum/go-embeddings v0.9.1
 	github.com/sfomuseum/go-embeddingsdb v0.23.4
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.20.2
@@ -122,8 +122,9 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-getter v1.8.6 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/hashicorp/go-version v1.8.0 // indirect
-	github.com/hybridgroup/yzma v1.32.0 // indirect
+	github.com/hybridgroup/yzma v1.33.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jtacoma/uritemplates v1.0.0 // indirect
 	github.com/jupiterrider/ffi v0.8.0 // indirect

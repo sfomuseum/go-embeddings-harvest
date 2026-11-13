@@ -273,8 +273,7 @@ func (h *SFOMuseumHarvester) iterateMedia(ctx context.Context, opts *IterateOpti
 					creditline_rsp := gjson.GetBytes(parent_body, "properties.sfomuseum:creditline")
 
 					if !creditline_rsp.Exists() {
-						logger.Error("Parent record is missing creditline", "parent id", parent_id)
-						return
+						logger.Warn("Parent record is missing creditline", "parent id", parent_id)
 					}
 
 					subject_creditline = creditline_rsp.String()

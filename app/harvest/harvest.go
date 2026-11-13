@@ -60,7 +60,7 @@ func RunWithOptions(ctx context.Context, opts *RunOptions) error {
 
 	defer blob_c.Close()
 
-	http_cl := http.NewClient()
+	http_cl := http.NewRetryableClient()
 
 	cache_opts := &http.GetWithCacheOptions{
 		CheckLastModTime: opts.CacheCheckLastmodified,
