@@ -5,15 +5,16 @@ import (
 	"encoding/json/v2"
 	"fmt"
 	"iter"
-	"maps"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/aaronland/go-jsonl/walk"
-	_ "github.com/sfomuseum/go-blobcache/http"
+	"github.com/sfomuseum/go-blobcache/http"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/oembeddings"
 )
 
 func init() {
@@ -73,6 +74,14 @@ func (h *JSONLHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter
 
 		defer r.Close()
 
+		walk_opts := &walk.IterateOptions{
+			ValidateJSON: false,
+			FormatJSON:   false,
+			QuerySet:     nil,
+			IsBzip:       false,
+			Filter:       nil,
+		}
+
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
@@ -85,7 +94,7 @@ func (h *JSONLHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter
 
 		wg := new(sync.WaitGroup)
 
-		for walk_rec, err := range walk.IterateReader(ctx, r) {
+		for walk_rec, err := range walk.IterateReader(ctx, walk_opts, r) {
 
 			select {
 			case <-ctx.Done():
@@ -99,8 +108,6 @@ func (h *JSONLHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter
 
 			<-opts.Throttle
 
-			row := maps.Clone(walk_rec)
-
 			wg.Go(func() {
 
 				defer func() {
@@ -109,11 +116,87 @@ func (h *JSONLHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter
 
 				var rec *embeddingsdb.Record
 
-				err = json.Unmarshal(row.Body, &rec)
+				err = json.Unmarshal(walk_rec.Body, &rec)
 
 				if err != nil {
-					yield(nil, err)
+					slog.Warn("Failed to unmarshal record", "error", err)
 					return
+				}
+
+				logger := slog.Default()
+				logger = logger.With("subject", rec.SubjectId)
+
+				oe, err := oembeddings.FromAttributes(rec.Attributes)
+
+				if err != nil {
+					logger.Warn("Failed to derive oembeddings from attributes", "error", err)
+					return
+				}
+
+				var derive_opts *DeriveEmbeddingsRecordsOptions
+
+				switch oe.Type {
+				case "image":
+
+					im_url := oe.Preview
+
+					if im_url == "" {
+						logger.Warn("No image URL")
+						return
+					}
+
+					im_u, err := url.Parse(im_url)
+
+					if err != nil {
+						logger.Error("Failed to parse image URL", "url", im_url, "error", err)
+						return
+					}
+
+					im_q := im_u.Query()
+
+					if !im_q.Has("sha") {
+						logger.Warn("Image URL missing ?sha", "url", im_url)
+						return
+					}
+
+					logger.Debug("Fetch image", "url", im_url)
+
+					im_body, err := http.GetBytesWithCacheAndOptions(ctx, opts.CacheOptions, im_url)
+
+					if err != nil {
+						logger.Error("Failed to retrieve image", "url", im_url, "error", err)
+						return
+					}
+
+					if opts.PreCache {
+						return
+					}
+
+					derive_opts = &DeriveEmbeddingsRecordsOptions{
+						Provider:    rec.Provider,
+						DepictionId: rec.DepictionId,
+						SubjectId:   rec.SubjectId,
+						Attributes:  oe.AsMap(),
+						Models:      opts.Models,
+						Body:        im_body,
+					}
+
+					logger.Debug("Wrote embeddings for exhibition image", "url", im_url)
+
+				default:
+					logger.Warn("Unsupported record type", "type", oe.Type)
+					return
+				}
+
+				records, err := DeriveEmbeddingsRecords(ctx, opts.EmbeddingsClient, derive_opts)
+
+				if err != nil {
+					logger.Error("Failed to derive embeddings records", "error", err)
+					return
+				}
+
+				if len(records) > 0 {
+					buffer.Append(records...)
 				}
 
 			})
