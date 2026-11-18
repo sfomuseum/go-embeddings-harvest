@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	MustRegisterHarvester(context.Background(), "null", NewJSONLHarvester)
+	MustRegisterHarvester(context.Background(), "jsonl", NewJSONLHarvester)
 }
 
 type JSONLHarvester struct {
