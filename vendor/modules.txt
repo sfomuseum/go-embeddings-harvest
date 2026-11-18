@@ -154,11 +154,11 @@ github.com/aaronland/go-aws/v3/dynamodb
 github.com/aaronland/go-flickr-api/auth
 github.com/aaronland/go-flickr-api/client
 github.com/aaronland/go-flickr-api/response
-# github.com/aaronland/go-json-query v0.3.0
-## explicit; go 1.26
+# github.com/aaronland/go-json-query v0.3.1
+## explicit; go 1.27.4
 github.com/aaronland/go-json-query
-# github.com/aaronland/go-jsonl v0.1.1
-## explicit; go 1.26
+# github.com/aaronland/go-jsonl v0.1.2
+## explicit; go 1.27.4
 github.com/aaronland/go-jsonl/walk
 # github.com/aaronland/go-pagination v0.4.0
 ## explicit; go 1.25
@@ -909,7 +909,7 @@ github.com/spiffe/go-spiffe/v2/internal/jwtutil
 github.com/spiffe/go-spiffe/v2/internal/pemutil
 github.com/spiffe/go-spiffe/v2/internal/x509util
 github.com/spiffe/go-spiffe/v2/spiffeid
-# github.com/tidwall/gjson v1.20.2
+# github.com/tidwall/gjson v1.20.4
 ## explicit; go 1.23
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.1.1
