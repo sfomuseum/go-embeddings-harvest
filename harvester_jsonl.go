@@ -21,11 +21,22 @@ func init() {
 	MustRegisterHarvester(context.Background(), "jsonl", NewJSONLHarvester)
 }
 
+// JSONLHarvester implements the Harvester interface to parse data and
+// derive vector embeddings from a line-separated file containing JSON-encoded
+// [embeddingsdb.Record] records. These records are expected to have empty 'model'
+// and 'embeddings' properties.
 type JSONLHarvester struct {
 	Harvester
 	path string
 }
 
+// NewJSONLHarvester instantiates and returns a new Harvester configured for
+// processing files containing line-separated JSON-encoded [embeddingsdb.Record] records.
+// It requires a scheme-prefixed URI mapping the absolute file location of the JSONL file.
+//
+// Example:
+//
+//	json:///usr/local/data/collection.jsonl
 func NewJSONLHarvester(ctx context.Context, uri string) (Harvester, error) {
 
 	u, err := url.Parse(uri)
@@ -61,6 +72,9 @@ func NewJSONLHarvester(ctx context.Context, uri string) (Harvester, error) {
 	return h, nil
 }
 
+// Iterate processes [embeddingsdb.Record] records sequentially by interpreting rows,
+// pulling out image records via row attributes, and yielding mapped database records
+// through an asynchronous background iterator.
 func (h *JSONLHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter.Seq2[[]*embeddingsdb.Record, error] {
 
 	return func(yield func([]*embeddingsdb.Record, error) bool) {
@@ -222,6 +236,8 @@ func (h *JSONLHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter
 	}
 }
 
+// Close releases active resource pipelines managed by the JSONLHarvester.
+// It fulfills the abstract Harvester interface and functions as a standard no-op.
 func (h *JSONLHarvester) Close() error {
 	return nil
 }
