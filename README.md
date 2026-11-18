@@ -249,7 +249,7 @@ cma:///usr/local/data/cma/openaccess/data.csv
 
 #### Flickr
 
-_Derive embeddings for images using the [Flickr API](https://www.flickr.com/services/api/). This harvester has been temporarily removed but will return shortly._
+_Derive embeddings for images using the [Flickr API](https://www.flickr.com/services/api/).
 
 ```
 flickr://{PROVIDER_NAME}/{FLICKR_SPR_PATH}?client_uri={FLICKR_API_CLIENT_RUNTIMEVAR_URI}
@@ -260,6 +260,42 @@ For example:
 ```
 flickr://flickr-commons-powerhouse?client-uri=file:///usr/local/secrets/flickr/client.txt
 ```
+
+#### JSONL (line-separated JSON)
+
+Derive embeddings from a line-separated file containing JSON-encoded [embeddingsdb.Record](https://github.com/sfomuseum/go-embeddingsdb#records) records.
+
+```
+jsonl://{PATH_TO_JSONL_FILE}
+```
+
+For example:
+
+```
+jsonl:///usr/local/data/moma.jsonl
+```
+
+An individual record (pretty-printed) might look like this:
+
+```
+{
+  "provider": "moma",
+  "depiction_id": "32431e10c2f95523",
+  "subject_id": "644",
+  "attributes": {
+    "preview": "https://www.moma.org/media/W1siZiIsIjUxOTc2MCJdLFsicCIsImNvbnZlcnQiLCItcmVzaXplIDEwMjR4MTAyNFx1MDAzZSJdXQ.jpg?sha=32431e10c2f95523",
+    "provider_name": "Museum of Modern Art",
+    "provider_url": "https://www.moma.org/",
+    "subject_creditline": "Philip Johnson Fund",
+    "subject_title": "",
+    "subject_url": "https://www.moma.org/collection/works/644",
+    "type": "image"
+  }
+```
+
+Note the absense of `model`, `embeddings`, or `created` properties. These can be safely ignored entirely.
+
+The `attributes` dictionary can contain as many fields as you want but is expected, at a minimum, to conform to the [oembeddings.OEmbedding](https://github.com/sfomuseum/go-embeddingsdb/tree/main/oembeddings#oembeddings) data structure. The image URI to produce vector embeddings for is derived from the `attributes.preview` property.
 
 #### Museum of Modern Art
 

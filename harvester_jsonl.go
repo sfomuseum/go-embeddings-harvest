@@ -42,7 +42,7 @@ func NewJSONLHarvester(ctx context.Context, uri string) (Harvester, error) {
 	u, err := url.Parse(uri)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse URI, %w")
+		return nil, fmt.Errorf("Failed to parse URI, %w", err)
 	}
 
 	if u.Path == "" {
