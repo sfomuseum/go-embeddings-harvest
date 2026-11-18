@@ -128,16 +128,18 @@ func (h *JSONLHarvester) Iterate(ctx context.Context, opts *IterateOptions) iter
 					opts.Throttle <- true
 				}()
 
+				logger := slog.Default()
+				logger = logger.With("line", walk_rec.LineNumber)
+
 				var rec *embeddingsdb.Record
 
 				err = json.Unmarshal(walk_rec.Body, &rec)
 
 				if err != nil {
-					slog.Warn("Failed to unmarshal record", "error", err)
+					logger.Warn("Failed to unmarshal record", "error", err)
 					return
 				}
 
-				logger := slog.Default()
 				logger = logger.With("subject", rec.SubjectId)
 
 				oe, err := oembeddings.FromAttributes(rec.Attributes)
