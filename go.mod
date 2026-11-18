@@ -4,16 +4,16 @@ go 1.27.4
 
 require (
 	github.com/aaronland/go-flickr-api v1.1.11
-	github.com/aaronland/go-jsonl v0.1.1
+	github.com/aaronland/go-jsonl v0.1.2
 	github.com/aaronland/go-roster v1.0.0
 	github.com/aaronland/go-smithsonian-openaccess v0.3.0
 	github.com/aaronland/gocloud v1.3.6
 	github.com/sfomuseum/go-blobcache v1.2.0
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
 	github.com/sfomuseum/go-embeddings v0.9.1
-	github.com/sfomuseum/go-embeddingsdb v0.23.4
+	github.com/sfomuseum/go-embeddingsdb v0.24.0
 	github.com/sfomuseum/go-flags v0.12.1
-	github.com/tidwall/gjson v1.20.2
+	github.com/tidwall/gjson v1.20.4
 	github.com/whosonfirst/go-reader/v2 v2.1.0
 	github.com/whosonfirst/go-whosonfirst/v4 v4.13.1
 	gocloud.dev v0.49.0
@@ -38,7 +38,7 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.62.0 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.14.5 // indirect
 	github.com/aaronland/go-aws/v3 v3.7.3 // indirect
-	github.com/aaronland/go-json-query v0.3.0 // indirect
+	github.com/aaronland/go-json-query v0.3.1 // indirect
 	github.com/aaronland/go-pagination v0.4.0 // indirect
 	github.com/aaronland/go-pagination-sql v0.2.0 // indirect
 	github.com/andybalholm/brotli v1.2.7 // indirect

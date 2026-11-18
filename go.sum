@@ -54,10 +54,10 @@ github.com/aaronland/go-aws/v3 v3.7.3 h1:4r+BkVHDti3rCveewG7S9pVGfDxRXQVdOuwFu0l
 github.com/aaronland/go-aws/v3 v3.7.3/go.mod h1:eyNfJ0sPp09DtB2IcFa0mMjkspqVt/hMi0KA/EQQCko=
 github.com/aaronland/go-flickr-api v1.1.11 h1:Vsedr9Ki6KiQ+cs1l3Km9fGq4bBlPybuUGZGmgLkQYQ=
 github.com/aaronland/go-flickr-api v1.1.11/go.mod h1:d56QLziLI1ZW+fTvH5NBwwxEZt6H+rFZpwRr6pIzgkQ=
-github.com/aaronland/go-json-query v0.3.0 h1:AMrh9bhmCRWkXs7FWiRdWxUPTUA7KtSWa6IUvcKrF8k=
-github.com/aaronland/go-json-query v0.3.0/go.mod h1:lSg911oEIxJp8SQYbpOAVmfzwuaH8tCGoJY5BYHq0wU=
-github.com/aaronland/go-jsonl v0.1.1 h1:NNfAmFdjOusvL1iQ4BNwKHeWX0jJB2IuHWa7ctcAQ6w=
-github.com/aaronland/go-jsonl v0.1.1/go.mod h1:VZu1CTcaGU1YiIj9mFRQXhM6BJ+7fePdMSw2NNCiooc=
+github.com/aaronland/go-json-query v0.3.1 h1:CiHBkbLRlI2GyO4AAWNB/x2OkS1jO1fX0mveMWjTlfo=
+github.com/aaronland/go-json-query v0.3.1/go.mod h1:olOjVXGfRa3CHBxpBuL+gy69UQIY5gMR/SbFiE+MON0=
+github.com/aaronland/go-jsonl v0.1.2 h1:jTNbSVefiN7nciMbV0d5BH6xPdfaa5n/d1gtozzf8ik=
+github.com/aaronland/go-jsonl v0.1.2/go.mod h1:XSfNwigVGdksO1nObh3bAQ0i8qtR/GJXIpjfEOq4GhM=
 github.com/aaronland/go-pagination v0.2.0/go.mod h1:zrYVkUTBoe6yJ23l6OyTyfSpTyg6s/cNxZxNztXNQpQ=
 github.com/aaronland/go-pagination v0.4.0 h1:SPY9ThMoz07wn6kNQBxN4AvtJQgj8oxz5UTGybIpPOs=
 github.com/aaronland/go-pagination v0.4.0/go.mod h1:vYR4n0iMwVOm9nbYcSIYaHzJAVAXCN/79p32aJ/KQbc=
@@ -330,8 +330,8 @@ github.com/sfomuseum/go-edtf v1.3.0 h1:07oBf8NcWmpwIzUz/WMgTz1huQNVdiJ/IjFzkIRGj
 github.com/sfomuseum/go-edtf v1.3.0/go.mod h1:4RLvbBp7XhqRuDVhJjYUKY5napMKQvcZxQnIb/i1tyo=
 github.com/sfomuseum/go-embeddings v0.9.1 h1:9a06iFkK5RCZ8JdrS/xX0p0HFHRVAB2Dpu6RH/ym36I=
 github.com/sfomuseum/go-embeddings v0.9.1/go.mod h1:Gj6phvZG+sF826uT/lt+p5JuV11F9TVUZTFjOxbUV00=
-github.com/sfomuseum/go-embeddingsdb v0.23.4 h1:k2IQMCOTTCkvhcfNI6lU9dxafxDLlSTYftGZLvQhuOE=
-github.com/sfomuseum/go-embeddingsdb v0.23.4/go.mod h1:h/RhlFfBQh29dMyr8TT0TUdW561RIyXPO6+C6EfAwb0=
+github.com/sfomuseum/go-embeddingsdb v0.24.0 h1:vNBSRRdqxCV57hlESXerHNtdmBXS5CnPyPgKzSdlCe0=
+github.com/sfomuseum/go-embeddingsdb v0.24.0/go.mod h1:geVhoKX4QopHzy8jmpPL7tuclUm5z/0HVDbqkb/CCLo=
 github.com/sfomuseum/go-encoderfile v0.0.1 h1:ht0GYR0b/KuljcmPIas5/0/nGNKxl9h/TewAtNfhM2c=
 github.com/sfomuseum/go-encoderfile v0.0.1/go.mod h1:zFc9CxM/uEW2vXN6Wk9Zy1aEz3PdXlJVvx8Nzslbe8g=
 github.com/sfomuseum/go-flags v0.12.1 h1:xvg3iEz510JPr9ItPxOOF2C12JnlplodT1V/1Ty7Pg8=
@@ -355,8 +355,8 @@ github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXl
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-github.com/tidwall/gjson v1.20.2 h1:Ag48cSOUCOq/sheSLXV3M4ZS0FOd4YMnY1N7FRoxGQY=
-github.com/tidwall/gjson v1.20.2/go.mod h1:jV1Xkr7LRLVFhesDFU/nInoQ+MjVlnuqkUreTWMveUo=
+github.com/tidwall/gjson v1.20.4 h1:3A/Gmx6kyM902v2nepualaq7aYIGhF0eykJBTiIxryw=
+github.com/tidwall/gjson v1.20.4/go.mod h1:jV1Xkr7LRLVFhesDFU/nInoQ+MjVlnuqkUreTWMveUo=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
 github.com/tidwall/match v1.1.1/go.mod h1:eRSPERbgtNPcGhD8UCthc6PmLEQXEWd3PRB5JTxsfmM=
 github.com/tidwall/pretty v1.3.0 h1:DZmEzADnMIbThFXXslDgq9C0LCC/xzMrONm7iM77RM0=

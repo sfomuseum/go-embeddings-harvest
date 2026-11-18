@@ -1,7 +1,8 @@
 ## Databases
 
-There are currently (5) supported database implemetations:
+There are currently (6) supported database implemetations:
 
+* [Memory](#memory) - manages vector embeddings in memory using a brute-force (exact) Euclidean distance search. Nothing is persisted.
 * [DuckDB](#duckdb) - manages vector embeddings using the [DuckDB](https://duckdb.org/) database and the [VSS](https://duckdb.org/docs/stable/core_extensions/vss) extension.
 * [SQLite](#sqlite) - manages vector embeddings using the [SQLite](https://www.sqlite.org/) database and the the [sqlite-vec](https://pkg.go.dev/modernc.org/sqlite/vec) extension.
 * [Bleve](#bleve) - manages vector embeddings using the [Bleve](https://github.com/blevesearch/bleve) database and the [faiss](https://github.com/blevesearch/faiss) library.
@@ -41,6 +42,34 @@ For example:
 ```
 duckdb:///usr/local/data/embeddings
 ```
+
+### memory://
+
+Manage embeddings in memory. Records are held in a map and similar records are found by comparing the query embeddings with every stored record using Euclidean (L2) distance. This is simple and exact but query times grow linearly with the number of records, so it is best suited to small datasets, tests and prototyping. All data is discarded when the process exits or the database is closed and `Export` is not supported.
+
+```
+memory://?{QUERY_PARAMETERS}
+```
+
+Valid parameters are:
+
+| Key | Value | Required | Notes |
+| --- | --- | --- | --- |
+| dimensions | int | no | The number of dimensions for the embeddings being stored. If set, records and queries with a different number of dimensions are rejected. If omitted dimensions are not validated. |
+| max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 1.0. |
+| max-results | int | no | Update the default number of records to return when querying for similar embeddings. Default is 10. |
+
+For example:
+
+```
+memory://?dimensions=512&max-distance=2.0
+```
+
+Notes:
+
+* Adding a record with the same provider, depiction ID and model replaces the existing record. Records are never batched.
+* As with the SQLite implementation, similar records with a distance of 0 (including the record being queried for) are not returned.
+* Records are listed using countable pagination, ordered by subject ID, depiction ID and model. The `provider`, `model`, `subject_id` and `depiction_id` filters are supported.
 
 ### multi://
 
