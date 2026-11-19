@@ -8,9 +8,9 @@ require (
 	github.com/aaronland/go-roster v1.0.0
 	github.com/aaronland/go-smithsonian-openaccess v0.3.0
 	github.com/aaronland/gocloud v1.3.6
-	github.com/sfomuseum/go-blobcache v1.2.0
+	github.com/sfomuseum/go-blobcache v1.2.1
 	github.com/sfomuseum/go-csvdict/v2 v2.0.1
-	github.com/sfomuseum/go-embeddings v0.9.1
+	github.com/sfomuseum/go-embeddings v0.9.2
 	github.com/sfomuseum/go-embeddingsdb v0.24.0
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/tidwall/gjson v1.20.4

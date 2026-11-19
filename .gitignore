@@ -4,4 +4,4 @@ bin
 go.work*
 *.a
 work
-*.parquet
+.DS_Store

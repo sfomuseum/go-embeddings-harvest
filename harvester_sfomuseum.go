@@ -346,32 +346,19 @@ func (h *SFOMuseumHarvester) iterateInstagram(ctx context.Context, opts *Iterate
 			return
 		}
 
-		records_ch := make(chan []*embeddingsdb.Record)
-		err_ch := make(chan error)
-		done_ch := make(chan bool)
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
-		go func() {
+		// This is what we use to process records concurrently, capturing and
+		// yielding records without spilling outside of the main loop which causes
+		// all kinds of iterator/yield pain.
 
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case err := <-err_ch:
+		buffer := NewBuffer[*embeddingsdb.Record](100)
+		defer buffer.Close()
 
-					if !yield(nil, err) {
-						done_ch <- true
-						return
-					}
-
-				case records := <-records_ch:
-
-					if !yield(records, nil) {
-						done_ch <- true
-						return
-					}
-				}
-			}
-		}()
+		if opts.Verbose {
+			buffer.StartStatsTicker()
+		}
 
 		wg := new(sync.WaitGroup)
 
@@ -479,23 +466,33 @@ func (h *SFOMuseumHarvester) iterateInstagram(ctx context.Context, opts *Iterate
 
 				if err != nil {
 					logger.Error("Failed to derive embeddings records", "error", err)
-					// err_ch <- err
 					return
 				}
 
 				if len(records) > 0 {
-					records_ch <- records
+					buffer.Append(records...)					
 				}
 
 				logger.Debug("Wrote embeddings for instagram image", "url", im_url)
 			})
+
+			if records := buffer.CollectAndReset(false); records != nil {
+				if !yield(records, nil) {
+					cancel()
+					return
+				}
+			}
+			
 		}
 
 		wg.Wait()
 
-		done_ch <- true
-		close(records_ch)
-		close(err_ch)
+		if records := buffer.CollectAndReset(true); records != nil {
+			if !yield(records, nil) {
+				cancel()
+				return
+			}
+		}
 	}
 }
 
